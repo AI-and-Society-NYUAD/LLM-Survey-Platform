@@ -1,0 +1,1066 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>US Politics Survey</title>
+	<style>
+		body {
+			font-family: 'Arial', sans-serif;
+			margin: 20px;
+			background: #f4f4f4;
+			color: #333;
+		}
+
+		h1 {
+			text-align: center;
+			color: #444;
+		}
+
+		#timer {
+			font-size: 18px;
+/*			font-weight: bold;*/
+			color: #000000;
+			text-align: center;
+			margin-bottom: 10px;
+		}
+
+		#chatbox {
+			border: 2px solid #ddd;
+			border-radius: 10px;
+			padding: 15px;
+			background: #fff;
+			height: 400px;
+			overflow-y: auto;
+			box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+			margin-bottom: 10px;
+			font-size: 16px;
+		white-space: pre-wrap; /* Ensures long lines wrap instead of overflowing */
+			word-wrap: break-word; /* Wraps words to avoid horizontal scrolling */
+		}
+
+		#user-input {
+			width: calc(100% - 80px);
+			padding: 10px;
+			font-size: 16px;
+			border: 2px solid #ddd;
+			border-radius: 20px;
+			outline: none;
+			box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+		}
+
+		#user-input:focus {
+			border-color: #ff5733;
+			box-shadow: 0 0 8px rgba(255, 87, 51, 0.5);
+		}
+
+		.message {
+			margin: 10px 0;
+			padding: 10px;
+			border-radius: 10px;
+			max-width: 80%;
+			line-height: 1.5;
+			word-wrap: break-word;
+		}
+
+		.user {
+			background: #cce5ff;
+			align-self: flex-end;
+			color: #004085;
+		}
+
+		.assistant {
+			background: #f8d7da;
+			align-self: flex-start;
+			color: #721c24;
+		}
+
+		.message.user {
+			text-align: right;
+			margin-left: auto;
+		}
+
+		.message.ai {
+			text-align: left;
+			margin-right: auto;
+		}
+
+		#final-question {
+			font-size: 28px;
+			font-weight: bold;
+			color: #444;
+		}
+		#oppose-btn {
+			background-color: #d7191c;
+			color: white;
+			border-color: #d7191c;
+			border-radius: 0px;
+			font-size: 18px;
+			padding: 10px 20px;
+			cursor: pointer;
+			transition: background-color 0.3s;
+		}
+
+		#support-btn  {
+			background-color: #1a9641;
+			color: white;
+			border-color: #1a9641;
+			border-radius: 0px;
+			font-size: 18px;
+			padding: 10px 20px;
+			cursor: pointer;
+			transition: background-color 0.3s;
+		}
+
+		#support-btn:hover, #oppose-btn:hover {
+			border-color: #ffffff;
+			border-radius: 10px;
+		}
+
+		#support-btn:disabled, #oppose-btn:disabled {
+			background-color: #bababa;
+			border-color: #bababa;
+			cursor: not-allowed;
+		}
+
+		#vote-message {
+			font-size: 18px;
+			color: #28a745;
+			font-weight: bold;
+		}
+		#description p {
+			font-size: 18px;
+			color: #333;
+			background-color: #f9f9f9;
+			padding: 15px;
+			border: 1px solid #ddd;
+			border-radius: 10px;
+			box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+			margin: 0 auto;
+			max-width: 700px;
+		}
+		.survey-container {
+			display: flex;
+			justify-content: center; /* Horizontally center */
+			align-items: center;    /* Vertically center */
+			height: 50vh;          /* Full viewport height */
+			background-color: #f9f9f9; /* Optional background color */
+			margin: 0 auto;
+			max-width: 50%;
+			display: none;
+			padding: 20px;
+		}
+
+	</style>
+</head>
+<body>
+	<!--You are being asked to provide consent to participate in a research study. You can say yes or no. If you say yes now you can still change your mind later. Your participation in this research is voluntary, and you will not be penalized or lose benefits if you refuse to participate or decide to stop.-->
+
+	<!-- <h1>US Politics Survey</h1> -->
+
+	<div id="consent-section" style="margin-top: 50px;">
+		<p style="font-size: 18px; color: #555; line-height: 1.5; margin-bottom: 20px;">
+			<strong>Consent Form. </strong>
+		You are being asked to provide consent to participate in a research study. You can say yes or no. If you say yes now you can still change your mind later. Your participation in this research is voluntary, and you will not be penalized or lose benefits if you refuse to participate or decide to stop.
+		   <br><br>
+			<b>Purpose of Research.</b> This research is being done to better understand and evaluate the usefulness of AI models for political reasoning. You are being asked to participate because you are a US adult.
+			<br><br>
+			<b>Procedures.</b> You will be shown a series of four hypothetical political debates. You will then be given access to a special AI chatbot, and asked to discuss the debate with the chatbot for several minutes. You will then be asked to indicate your position on that political debate.
+			<br><br>
+			<b>Duration.</b> Participation will involve approximately 16 minutes of your time.<br><br>
+			<b>Risks.</b> We believe there are no known risks associated with this research study. A possible inconvenience may be the time it takes to complete the study.
+		<!--We believe there are no known risks associated with this research study; however, a possible inconvenience may be the time it takes to complete the study.-->
+			<br><br>
+			<b>Benefits.</b> You will not benefit directly from participating in this study. We hope to learn more about how AI will affect public opinion and politics, and your participation will help us to do that.
+			<br><br>
+			<b>Compensation.</b> You will be compensated approximately $3.00 for your time.
+			<br><br>
+			<b>Privacy and Confidentiality.</b> The following procedures will be used to protect the confidentiality of your data. The researchers will keep all study records stored in a secure location. All electronic files (e.g., database, spreadsheet, etc.) containing identifiable information will be password protected. Any computer hosting such files will also have password protection to prevent access by unauthorized users. Only the members of the research staff will have access to the passwords. Data that will be shared with others will be anonymized to help protect your identity. At the conclusion of this study, the researchers may publish their findings. Information will be presented in summary format and you will not be identified in any publications or presentations. All anonymized data will be preserved on a replication archive in the Harvard Dataverse, where they will be publicly available.
+			You should also know that the NYUAD Institutional Review Board (IRB) may inspect study records as part of its auditing program, but these reviews will only focus on the researchers and not on your responses or involvement. The IRB is a group of people who review research studies to protect the rights and welfare or research participants.
+			If you have further questions about this study or if you have a research-related problem, you may contact the principal investigator, Aaron Kaufman (ak8096@nyu.edu). If you have any questions concerning your rights as a research participant, you may contact the New York University Abu Dhabi Institutional Review Board (IRB) at irbnyuad@nyu.edu.
+		</p>
+		<button id="accept-consent-btn" onclick="acceptConsent()" style="margin-right: 10px; padding: 10px 20px; font-size: 18px; cursor: pointer;">
+			I Accept
+		</button>
+		<button id="decline-consent-btn" onclick="declineConsent()" style="padding: 10px 20px; font-size: 18px; cursor: pointer;">
+			I Decline
+		</button>
+	</div>
+
+	<div id="instructions" style="margin-top: 50px; display: none;">
+		<p style="font-size: 18px; color: #555; line-height: 1.5; margin-bottom: 20px;">
+			Next, we'll ask you <strong>four questions</strong> about political proposals that might come up in the next few years. Please let us know if you are <strong>in favor or against</strong> each proposal.
+			<br><br>
+			To help you decide, an <strong>Artificial Intelligence (AI) Chatbot</strong> may accompany some, but not all, of the questions. This chatbot is powered by a Large Language Model (<strong>ChatGPT</strong> or a similar model).
+			<br><br> 
+			You may ask this chatbot to explain the political proposal if you don't understand it fully, to give you some of the pros and cons, to debate the proposal with you, or anything else that would help you make up your mind or better understand the proposal.
+			<br><br>
+			Please spend <strong>at least 3 minutes</strong> chatting with the AI chatbot, but you may take longer if you need more time to decide. A <strong>timer</strong> will appear, and once 3 minutes have elapsed, you will be able to proceed.
+		</p>
+		<button id="start-btn" onclick="start()" style="margin-right: 10px; padding: 10px 20px; font-size: 18px; cursor: pointer;">
+			Start
+		</button>
+	</div>
+
+	<div id="description" style="text-align: center; margin-bottom: 20px; display: none;">
+		<p style="font-size: 18px; color: #555; line-height: 1.5;"><b>First, please answer the following questions about yourself</b></p>
+	</div>
+
+	<div id="question-box" style="display: none; text-align: center; margin-top: 20px; margin-bottom: 30px;">
+		<p id="final-question" style="font-size: 24px; font-weight: bold; margin-bottom: 20px;">
+			<!-- Do you support or oppose this topic? -->
+		</p>
+		<button id="support-btn" onclick="submitVote('Yes')" style="margin-right: 10px; padding: 10px 20px; font-size: 18px; cursor: pointer;">
+			Yes
+		</button>
+		<button id="oppose-btn" onclick="submitVote('No')" style="padding: 10px 20px; font-size: 18px; cursor: pointer;">
+			No
+		</button>
+		<p id="vote-message" style="margin-top: 20px; font-size: 16px; color: green; display: none;"></p>
+	</div>
+
+	<div id="timer" style="display: none;">Please spend the remaining time <strong>chatting with our AI Assistant</strong> about this issue before deciding on your answer: <span style="color: red;">3:00</span></div>
+	<div id="chatbox" style="display: none;"></div>
+	<input type="text" style="display: none;" id="user-input" placeholder="Type your message here..." />
+
+<!-- 	<div id="loading-indicator" style="display: none; text-align: center; margin-top: 10px;">
+    	<p>Loading...</p>
+	</div> -->
+
+
+	<div class="survey-container">
+		<div id="survey-questions" style="display: none; text-align: left; margin-top: 20px;">
+			<!-- Question 1 -->
+			<div class="survey-page" id="question-1" style="display: block;">
+				<h2>Question 1</h2>
+				<p>In the past 24 hours have you... (check all that apply)</p>
+				<input type="checkbox" id="remote1" name="question1" value="user_social_media">
+				<label for="remote1">Used social media (such as Facebook or Youtube)</label><br>
+				<input type="checkbox" id="remote2" name="question1" value="watched_tv_news">
+				<label for="remote2">Watched TV news</label><br>
+				<input type="checkbox" id="remote3" name="question1" value="read_newspaper">
+				<label for="remote3">Read a newspaper in print or online </label><br>
+				<input type="checkbox" id="remote4" name="question1" value="listened_to_radio_news">
+				<label for="remote4">Listened to a radio news program or talk radio</label><br>
+				<input type="checkbox" id="remote5" name="question1" value="none">
+				<label for="remote5">None of these</label><br>      
+			</div>
+
+			<!-- Question 2 -->
+			<div class="survey-page" id="question-2" style="display: none;">
+				<h2>Question 2</h2>
+				<p>Which of these networks did you watch?</p>
+				<input type="checkbox" id="challenge1" name="question2" value="ABC">
+				<label for="challenge1">ABC</label><br>
+				<input type="checkbox" id="challenge2" name="question2" value="CBS">
+				<label for="challenge2">CBS</label><br>
+				<input type="checkbox" id="challenge3" name="question2" value="NBC">
+				<label for="challenge3">NBC</label><br>
+				<input type="checkbox" id="challenge4" name="question2" value="CNN">
+				<label for="challenge4">CNN</label><br>
+				<input type="checkbox" id="challenge5" name="question2" value="Fox_News">
+				<label for="challenge1">Fox News</label><br>
+				<input type="checkbox" id="challenge6" name="question2" value="MSNBC">
+				<label for="challenge2">MSNBC</label><br>
+				<input type="checkbox" id="challenge7" name="question2" value="PBS">
+				<label for="challenge3">PBS</label><br>
+				<input type="checkbox" id="challenge8" name="question2" value="Other">
+				<label for="challenge4">Other</label><br>
+				<input type="checkbox" id="challenge8" name="question2" value="none">
+				<label for="challenge4">None of these</label><br>
+			</div>
+
+			<!-- Question 3 -->
+			<div class="survey-page" id="question-3" style="display: none;">
+				<h2>Question 3</h2>
+				<p style='width: 500px; left-padding: 20px; word-wrap: break-word;'>Some people seem to follow what's going on in government and public affairs most of the time, whether there's an election going on or not. Others aren't that interested. Would you say you follow what's going on in government and public affairs ...</p>
+				<div style="text-align: left; display: inline-block;">
+					<input type="radio" id="remote" name="question3" value="most_of_the_time">
+					<label for="remote">Most of the time</label><br>
+					<input type="radio" id="office" name="question3" value="some_of_the_time">
+					<label for="office">Some of the time</label><br>
+					<input type="radio" id="hybrid" name="question3" value="only_now_and_then">
+					<label for="hybrid">Only now and then</label><br>
+					<input type="radio" id="hybrid" name="question3" value="hardly_at_all">
+					<label for="hybrid">Hardly at all</label><br>
+					<input type="radio" id="hybrid" name="question3" value="Don't_know">
+					<label for="hybrid">Don't know</label>
+				</div>
+			</div>
+
+			<!-- Question 4 -->
+			<div class="survey-page" id="question-4" style="display: none;">
+				<h2>Question 4</h2>
+				<p style='width: 500px; left-padding: 20px; word-wrap: break-word;'>We sometimes find people don't always take surveys seriously, instead providing humorous or insincere responses to questions. How often do you do this?</p>
+				<div style="text-align: left; display: inline-block;">
+					<input type="radio" id="remote" name="question4" value="Never">
+					<label for="remote">Never</label><br>
+					<input type="radio" id="office" name="question4" value="Rarely">
+					<label for="office">Rarely</label><br>
+					<input type="radio" id="hybrid" name="question4" value="Some of the time">
+					<label for="hybrid">Some of the time</label><br>
+					<input type="radio" id="hybrid" name="question4" value="Most of the time">
+					<label for="hybrid">Most of the time</label><br>
+					<input type="radio" id="hybrid" name="question4" value="Always">
+					<label for="hybrid">Always</label>
+				</div>
+			</div>
+
+			<!-- Question 5 -->
+			<div class="survey-page" id="question-5" style="display: none;">
+				<h2>Question 5</h2>
+				<p style='width: 500px; left-padding: 20px; word-wrap: break-word;'>How often do you use Large Language Models such as ChatGPT in your work or personal life?</p>
+				<div style="text-align: left; display: inline-block;">
+					<input type="radio" id="remote" name="question5" value="Never">
+					<label for="remote"><b>Never:</b> I do not use these tools in my work or personal life.</label><br>
+					<input type="radio" id="office" name="question5" value="Rarely">
+					<label for="office"><b>Rarely:</b> I use these tools less than once a month.</label><br>
+					<input type="radio" id="hybrid" name="question5" value="Sometimes">
+					<label for="hybrid"><b>Sometimes:</b> I use these tools a few times a month.</label><br>
+					<input type="radio" id="hybrid" name="question5" value="Often">
+					<label for="hybrid"><b>Often:</b> I use these tools several times a week.</label><br>
+					<input type="radio" id="hybrid" name="question5" value="Very often">
+					<label for="hybrid"><b>Very Often:</b> I use these tools daily or multiple times a day.</label>
+				</div>
+			</div>
+
+			<!-- Navigation Buttons -->
+			<div id="navigation-buttons" style="margin-top: 20px;">
+				<button id="back-button" onclick="navigatePage(-1)" style="padding: 10px 20px; font-size: 16px; display: none;">
+					Back
+				</button>
+				<button id="next-button" onclick="navigatePage(1)" style="padding: 10px 20px; font-size: 16px;">
+					Next
+				</button>
+			</div>
+		</div>
+	</div>
+
+
+
+	<script>
+		const questionAIModel = {
+			0: "ChatGPT", 
+			1: "Llama",  
+			2: "ChatGPT",   
+			3: "Mistral" 
+		};
+
+		// Define questions by categories
+		const categories = [
+			{
+				name: "Gun control",
+				questions: [
+					"Should the government make it easier for people to obtain concealed-carry permit?",
+					"Should the government ban assault rifles?"
+				],
+				expert: [
+					"carry permit and gun control",
+					"gun control"
+				],
+				default: [
+					"No.\n\nMaking it easier to obtain concealed-carry permits could increase the number of firearms carried in public spaces, potentially leading to more instances of gun violence, either intentionally or accidentally. While I recognize the Second Amendment rights and the desire for self-defense, I believe there should be stringent background checks, training requirements, and mental health assessments to ensure only responsible individuals carry firearms. Public safety should take precedence over ease of access in this context.",
+					"Yes.\n\nAssault rifles are designed for military use, prioritizing maximum lethality and efficiency in combat situations. In civilian contexts, their availability has been linked to mass shootings, causing widespread harm and fear. While responsible gun ownership is a protected right under the Second Amendment, public safety concerns warrant restrictions on weapons not intended for self-defense or hunting. Banning assault rifles can help reduce the potential for large-scale violence without infringing on the broader right to bear arms."
+				]
+			},
+			{
+				name: "Immigration",
+				questions: [
+					"Should the government reduce legal immigration by 50 percent over the next 10 years by eliminating the visa lottery and ending family-based migration?",
+					"Should the government increase spending on border security by $25 billion?"
+				],
+				expert: [
+					"immigration in the United States",
+					"border security in the United States"
+				],
+				default: [
+					"Yes\n\nHere's why I'm leaning towards reducing legal immigration:\n*   Over 50% of immigrants in the US are born with a foreign-born parent, and many of these individuals are not productive members of society.\n*   The visa lottery attracts individuals from other parts of the world who are looking to settle in the US without having to meet any specific requirements. Rather, they're given a chance to become a permanent resident based on a random drawing of applicants.\n*   The current system has led to the brain drain of highly skilled workers from abroad, depriving the US of talent and competition.\n*   The ends do not justify the means. Reducing the number of visa applicants would require significant economic growth to absorb the lost talent and revenue.\n\nImmigration policies can provide multiple avenues for the greater needs within society. For instance, this new proposal could reduce the demand for low-skilled unemployed immigrant labor because it would reduce immigration eligibility and create more opportunities for Americans to work, pay taxes and commit to society.",
+					"Yes\n\nI would support increasing spending on border security by at least $25 billion, which would include funding for:\n* Constructing a sturdy, high-quality wall along the US-Mexico border, with physical barriers and surveillance systems to prevent unauthorized crossing.\n* Enhancing training and job opportunities for US Customs and Border Protection (CBP) and Immigration and Customs Enforcement (ICE) personnel.\n* Supporting border technology, including advanced surveillance cameras and drones to monitor and respond to incidents at the border.\n* Strengthening community partnerships and social services to help migrant families and individuals adjust to their new lives in the US.\n* Developing strategies to address the root causes of migration, such as poverty, violence, and conflict in Central America."
+				]
+			},
+			{
+				name: "Health care",
+				questions: [
+					"Should the government expand Medicare to a single comprehensive public health care coverage program that would cover all Americans?",
+					"Should the government allow states to import prescription drugs from other countries?"
+				],
+				expert: [
+					"Medicare and public healthcare",
+					"prescription drugs imports"
+				],
+				default: [
+					"Yes.\n\nExpanding Medicare to a single comprehensive public healthcare coverage program would ensure that every American has access to necessary healthcare, reducing the disparities currently present in the system. A universal program could lead to lower administrative costs, as a single-payer system streamlines billing and eliminates the complexities of dealing with multiple private insurers. It would also likely result in better public health outcomes, as preventative care becomes more accessible, reducing the need for expensive emergency treatments. While there are concerns about increased taxes to fund such a program, the overall savings from reduced premiums, deductibles, and out-of-pocket expenses could outweigh those costs for most Americans.",
+					"Yes.\n\nThe government should allow states to import prescription drugs from other countries. This policy could help reduce the high cost of medications in the United States by introducing competition into the pharmaceutical market. Many countries, such as Canada, regulate drug prices more strictly than the U.S., leading to significantly lower costs for the same medications. Allowing imports could alleviate financial burdens on individuals and families who struggle to afford necessary prescriptions.\n\nHowever, it would be essential to establish robust safety and quality control measures to ensure that imported drugs meet U.S. standards, preventing potential risks to public health."
+				]
+			},
+			{
+				name: "Police",
+				questions: [
+					"Should the government end the Department of Defense program that sends surplus military weapons and equipment to police departments?",
+					"Should the government create a national registry of police who have been investigated or disciplined for misconduct?"
+				],
+				expert: [
+					"Police program",
+					"Police investigation and misconduct"
+				],
+				default: [
+					"No\n\nThis program, known as the 1033 Program, allows police departments to acquire equipment that they might not otherwise be able to afford, such as vehicles, protective gear, and weapons. This can help improve the safety and effectiveness of law enforcement, which is crucial for maintaining public safety and order. Additionally, it's a cost-effective way for the government to dispose of surplus military equipment, rather than storing or destroying it. However, it's important that this program is used responsibly and that police departments are properly trained in the use of this equipment to ensure it's used appropriately and safely.",
+					"No.\n\nWhile transparency and accountability in policing are crucial, I believe that such a registry could have unintended consequences. It could potentially stigmatize officers who have been falsely accused or disciplined for minor, non-criminal misconduct. Moreover, it might discourage police departments from addressing misconduct internally, as they may fear that officers' careers would be negatively impacted. Instead, I would prefer to see more robust systems for tracking and addressing police misconduct within existing frameworks, such as improved data collection and sharing among departments, and stronger oversight mechanisms."
+				]
+			},
+		];
+
+		let conversationHistory = [];
+		let prolificPID= '';
+
+		// Store state
+		let currentCategoryIndex = 0;
+		let currentQuestionIndex = -1;
+		let currentQuestion = null;
+		let showChatbox = false;
+		let timeLeft = 180; // 5 minutes in seconds
+		let timer;
+		const chatbox = document.getElementById('chatbox');
+		const userInput = document.getElementById('user-input');
+
+		let currentPage = 1; // Tracks the current question page
+		const totalPages = 5; // Total number of survey pages
+
+		function navigatePage(step) {
+			console.log(currentPage)
+
+			if (step >= 0 && !checkAnswers())
+				return;
+
+			// Hide current page
+			document.getElementById(`question-${currentPage}`).style.display = "none";
+
+			// Update current page
+			currentPage += step;
+
+			if (currentPage <= totalPages) {
+				// Show new page
+				document.getElementById(`question-${currentPage}`).style.display = "block";
+			}
+
+			// Update navigation buttons
+			updateNavigationButtons();
+		}
+
+		function updateNavigationButtons() {
+			// Show or hide "Back" button
+			const backButton = document.getElementById('back-button');
+			backButton.style.display = currentPage > 1 ? "inline-block" : "none";
+
+			// Change "Next" button text on the last page
+			const nextButton = document.getElementById('next-button');
+			nextButton.textContent = currentPage === totalPages ? "Submit" : "Next";
+
+			// Handle submit logic on the last page
+			if (currentPage > totalPages) {
+				submitSurveyAnswers();
+			}
+		}
+
+		function start() {
+			// Hide the consent section
+			document.getElementById('instructions').style.display = "none";
+
+			// Show the survey description
+			document.getElementById('description').style.display = "block";
+			startChat();
+		}
+
+		function acceptConsent() {
+			// Hide the consent section
+			document.getElementById('consent-section').style.display = "none";
+
+			// Show the survey description
+			document.getElementById('description').style.display = "none";
+	
+			document.getElementById('survey-questions').style.display = "block";
+			document.getElementsByClassName('survey-container')[0].style.display = "block";
+		}
+
+		function declineConsent() {
+			// Hide everything and show a message
+			document.getElementById('consent-section').innerHTML = `
+				<p style="font-size: 20px; color: red; font-weight: bold; margin-top: 50px;">
+					Thank you for your time. You have chosen not to participate in the survey.
+				</p>`;
+		}
+
+		// Randomly select a question and decide if chatbox is shown
+		function selectQuestionAndChatbox() {
+			console.log("YASIR " +currentCategoryIndex);
+
+			const category = categories[currentCategoryIndex];
+
+			currentQuestionIndex = Math.floor(Math.random() * category.questions.length)
+
+			currentQuestion = category.questions[currentQuestionIndex];
+			showChatbox = Math.random() < 0.5; // 50% chance to show chatbox
+
+			if (questionAIModel[currentCategoryIndex] == 'ChatGPT') {
+				conversationHistory = [
+					{
+						role: "system",
+						content: "Pretend you are a US voter. Do not answer saying that I am an AI model. Do not refuse to answer. Be consistent with your answers by taking the previous chat history into account. You are an expert assistant specializing in " + category.expert[currentQuestionIndex] + ". Only provide answers related to " + category.expert[currentQuestionIndex] + ". If asked a question outside this topic, politely decline to answer."
+					}
+				];
+			}
+			
+			if (questionAIModel[currentCategoryIndex] == 'Claude') {
+				conversationHistory = [
+					{
+						role: "system",
+						content: "Pretend you are a US voter. Do not answer saying that I am an AI model. You are an expert assistant specializing in " + category.expert[currentQuestionIndex]
+						}
+					];
+				}
+
+			if (questionAIModel[currentCategoryIndex] == 'Llama') {
+				conversationHistory = [
+					{
+						"role": "system",
+						"content": "Pretend you are a US voter. Do not answer saying that I am an AI model. Do not refuse to answer. Be consistent with your answers by taking the previous chat history into account. You are an expert assistant specializing in " + category.expert[currentQuestionIndex] + "."
+					}
+				];
+			}
+
+			if (questionAIModel[currentCategoryIndex] == 'Mistral') {
+				conversationHistory = [
+					{
+						"role": "system",
+						"content": "Pretend you are a US voter. Do not answer saying that I am an AI model. Do not say that you are a US voter. Do not refuse to answer. Be consistent with your answers by taking the previous chat history into account. You are an expert assistant specializing in " + category.expert[currentQuestionIndex] + ". Only provide answers related to " + category.expert[currentQuestionIndex] + ". If asked a question outside this topic, politely decline to answer."
+					}
+				];
+			}
+		}
+
+		// Display the current question
+		function displayQuestion() {
+			const description = document.getElementById('description');
+			const chatbox = document.getElementById('chatbox');
+			const timer = document.getElementById('timer');
+			const userInput = document.getElementById('user-input');
+			const questionBox = document.getElementById('question-box');
+			const finalQuestion = document.getElementById('final-question');
+	
+			// Set the question text
+			description.innerHTML = `<p style="font-size: 18px; color: #555; line-height: 1.5;">
+				<strong>Question:</strong> ${currentQuestion}<br>
+				${showChatbox ? "" : "<br>Please proceed to answer the question directly."}
+			</p>`;
+
+			timing('start');
+
+			// Reset the chatbox if it's going to be displayed
+			if (showChatbox) {
+				resetChatbox(); // Clear the chat history
+				chatbox.style.display = "block";
+				timer.style.display = "block";
+				userInput.style.display = "block";
+				questionBox.style.display = "block";
+				document.getElementById('support-btn').disabled = true;
+				document.getElementById('oppose-btn').disabled = true;
+
+				sendMessage_initial();
+
+				startTimer(() => {
+					document.getElementById('support-btn').disabled = false;
+					document.getElementById('oppose-btn').disabled = false;
+				});
+			} else {
+				chatbox.style.display = "none";
+				timer.style.display = "none";
+				userInput.style.display = "none";
+				questionBox.style.display = "block";
+				document.getElementById('support-btn').disabled = false;
+				document.getElementById('oppose-btn').disabled = false;
+			}
+		}
+
+
+		function showFinalMessage() {
+			// Hide all existing elements
+			document.getElementById('survey-questions').style.display = "none";
+
+			submitSurveyAnswers_v2();
+
+			// Display the final message
+			const body = document.querySelector('body');
+			const finalMessage = document.createElement('div');
+			finalMessage.style.textAlign = "center";
+			finalMessage.style.marginTop = "50px";
+			finalMessage.style.fontSize = "24px";
+			finalMessage.style.color = "green";
+			finalMessage.style.fontWeight = "bold";
+			finalMessage.innerHTML = "Thank you for completing the survey!<br><br>Please use the following code back at prolific 2025_LLM";
+			body.appendChild(finalMessage);
+		}
+
+		function resetChatbox() {
+			const chatbox = document.getElementById('chatbox');
+			chatbox.innerHTML = ''; // Clear all messages in the chatbox
+		}
+
+	function generateRandomHashKey(length = 12) {
+			const array = new Uint8Array(length);
+			crypto.getRandomValues(array);
+		return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('').slice(0, length);
+	}
+
+	// Function to get URL parameters
+	function getProlificParams() {
+		const params = new URLSearchParams(window.location.search);
+		const prolificPID = params.get('PROLIFIC_PID');
+		const studyID = params.get('STUDY_ID');
+		const sessionID = params.get('SESSION_ID');
+		return { prolificPID, studyID, sessionID };
+	}
+
+	// Store the Prolific parameters for later use
+	const prolificParams = getProlificParams();
+	
+	prolificPID = prolificParams['prolificPID'];
+
+	if (!prolificPID) {
+			prolificPID = generateRandomHashKey(); // Generate a random hash
+			console.log('Generated Random Prolific PID:', prolificPID);
+		}
+	
+	console.log('Retrieved Prolific PID:', prolificPID);
+
+		// Timer logic
+		function startTimer(callback) {
+			let timeLeft = 180; // 5 minutes in seconds
+			const timer = document.getElementById('timer');
+			timer.innerHTML = `Please spend the remaining time <strong>chatting with our AI Assistant</strong> about this issue before deciding on your answer: <span style="color: red;">3:00<br><br></span>`;
+		document.getElementById('question-box').style.display = "block";
+
+			const interval = setInterval(() => {
+				timeLeft--;
+				const minutes = Math.floor(timeLeft / 60);
+				const seconds = timeLeft % 60;
+				timer.innerHTML = `Please spend the remaining time <strong>chatting with our AI Assistant</strong> about this issue before deciding on your answer: <span style="color: red;">${minutes}:${seconds < 10 ? '0' : ''}${seconds}<br><br></span>`;
+				if (timeLeft <= 0) {
+					clearInterval(interval);
+					callback();
+				}
+			}, 1000);
+		}
+
+		// Submit the vote and proceed to the next category
+		function timing(choice, retryCount = 3) {
+
+			// Send the vote to the backend (along with category and question info)
+			const payload = {
+				question: currentQuestion,
+				prolificPID: prolificPID,
+				showChatbox: showChatbox,
+			};
+
+			// Define a function for sending the request
+    		function sendTiming(choice, attempt) {
+
+    			if (choice == 'start'){
+    				url = 'https://XXXXXX.com:5000/start'
+    			}
+    			else{
+    				url = 'https://XXXXXX.com:5000/end'
+    			}
+
+				fetch(url, {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify(payload),
+					})
+					.then(response => response.json())
+					.then(data => {
+						console.log('timing submitted:', data);
+					})
+					.catch(error => {
+						console.error('Error submitting timing:', error);
+
+						if (attempt < retryCount) {
+		                    // Retry the request
+		                    console.log(`Retrying... Attempt ${attempt + 1}`);
+		                    sendTiming(choice, attempt + 1);
+		                }
+					});
+				}
+
+			// Send the first request
+    		sendTiming(choice, 0);
+		}
+
+
+		// Submit the vote and proceed to the next category
+		function submitVote(choice, retryCount = 3) {
+			// Disable buttons to prevent multiple votes
+			document.getElementById('support-btn').disabled = true;
+			document.getElementById('oppose-btn').disabled = true;
+			const voteMessage = document.getElementById('vote-message');
+
+			// Send the vote to the backend (along with category and question info)
+			const payload = {
+				category: categories[currentCategoryIndex].name,
+				question: currentQuestion,
+				vote: choice,
+				prolificPID: prolificPID,
+				showChatbox: showChatbox,
+			};
+
+			timing('end');
+
+			// Define a function for sending the request
+    		function sendRequest(attempt) {
+
+				fetch('https://XXXXXX.com:5000/vote', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify(payload),
+				})
+					.then(response => response.json())
+					.then(data => {
+						console.log('Vote submitted:', data);
+						// Show the confirmation message
+						voteMessage.textContent = `Thank you! You voted: ${choice}. Please wait for the next question.`;
+						voteMessage.style.display = 'block';
+						conversationHistory = [];
+
+						// Proceed to the next category
+						setTimeout(() => {
+							document.getElementById('question-box').style.display = "block";
+							document.getElementById('vote-message').style.display = "none";
+							document.getElementById('support-btn').disabled = true;
+							document.getElementById('oppose-btn').disabled = true;
+
+							currentCategoryIndex++;
+							if (currentCategoryIndex < categories.length) {
+								selectQuestionAndChatbox();
+								displayQuestion();
+							} else {
+								// Show the final survey questions
+								document.getElementById('description').style.display = "none";
+								document.getElementById('chatbox').style.display = "none";
+								document.getElementById('timer').style.display = "none";
+								document.getElementById('user-input').style.display = "none";
+								document.getElementById('question-box').style.display = "none";
+								showFinalMessage();
+							}
+						}, 2000);
+					})
+					.catch(error => {
+						console.error('Error submitting vote:', error);
+
+						if (attempt < retryCount) {
+		                    // Retry the request
+		                    console.log(`Retrying... Attempt ${attempt + 1}`);
+		                    sendRequest(attempt + 1);
+		                } else {
+		                    // Show error message and allow retry manually
+		                    voteMessage.textContent = `Failed to submit your vote. Please try again.`;
+		                    voteMessage.style.color = 'red';
+		                    document.getElementById('support-btn').disabled = false;
+		                    document.getElementById('oppose-btn').disabled = false;
+		                }
+					});
+				}
+
+			// Send the first request
+    		sendRequest(0);
+
+		}
+
+
+		// Handle sending messages
+		function sendMessage_initial() {
+			const description = document.getElementById('description');
+
+			const userMessage = description.innerText.replace(/\s+/g, ' ').trim() + " Please answer this question first with either yes or no. Then in a new line explain why you picked this answer." 
+
+			// appendMessage('You', userMessage, 'user');
+			appendMessage('AI', "Hello, you can ask me anything related to the question above, for example:<ul><li>Explain the proposal</li><li>List some pros and cons</li><li>Debate the question with me</li><li>Tell you who supports and who opposes the proposal</li></ul>", 'assistant');
+
+			// conversationHistory.push({ role: 'user', content: userMessage });
+
+			const category = categories[currentCategoryIndex];
+			const aiMessage = category.default[currentQuestionIndex]; // YASIR
+			// appendMessage('AI', aiMessage, 'assistant');
+			conversationHistory.push({ "role": "user", "content": userMessage});
+			conversationHistory.push({ "role": 'assistant', "content": aiMessage });
+		}
+
+		// Handle sending messages
+		function sendMessage() {
+			const userMessage = userInput.value.trim();
+			if (!userMessage) return;
+
+			// Save the original placeholder and clear the input field
+		    const originalPlaceholder = userInput.placeholder;
+		    userInput.placeholder = "Please wait while we generate the answer ";
+		    userInput.value = '';
+
+		    // Disable the input
+		    userInput.disabled = true;
+
+		    // Create a loading dots animation
+		    let dotCount = 0;
+		    const loadingInterval = setInterval(() => {
+		        dotCount = (dotCount + 1) % 4; // Cycle through 0, 1, 2, 3 dots
+		        userInput.placeholder = "Please wait while we generate the answer " + ".".repeat(dotCount);
+		    }, 500);
+
+
+			appendMessage('You', userMessage, 'user');
+			conversationHistory.push({ role: 'user', content: userMessage });
+			userInput.value = '';
+
+			// Get the AI model for the current question
+			const aiModel = questionAIModel[currentCategoryIndex];
+			console.log("model: "+aiModel)
+
+			// Send message to the backend
+			fetch('https://XXXXXX.com:5000/chat', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				//body: JSON.stringify({ message: userMessage })
+
+				body: JSON.stringify({ history: conversationHistory, model: aiModel, prolificPID: prolificPID, question: currentQuestion })
+			})
+				.then(response => response.json())
+				.then(data => {
+					const aiMessage = data.response;
+
+					appendMessage('AI', data.response, 'assistant');
+					conversationHistory.push({ role: 'assistant', content: aiMessage });
+
+					// Stop the loading animation and restore the placeholder
+		            clearInterval(loadingInterval);
+		            userInput.placeholder = originalPlaceholder;
+		            userInput.disabled = false;
+		            userInput.focus();
+				})
+				.catch(error => {
+					console.error('Error:', error);
+					appendMessage('AI', 'Sorry, something went wrong. '+error, 'ai');
+
+					// Stop the loading animation and restore the placeholder
+		            clearInterval(loadingInterval);
+		            userInput.placeholder = originalPlaceholder;
+		            userInput.disabled = false;
+		            userInput.focus();
+				});
+		}
+
+		// Append a message to the chatbox
+		function appendMessage(sender, message, type) {
+			const messageDiv = document.createElement('div');
+			messageDiv.className = `message ${type}`;
+			messageDiv.innerHTML = `<strong>${sender}:</strong> ${message}`;
+			chatbox.appendChild(messageDiv);
+			chatbox.scrollTop = chatbox.scrollHeight;
+		}
+
+		// End the chat
+		function endChat() {
+			userInput.disabled = true;
+			//alert('Time is up! Please answer the following question.');
+			document.getElementById('question-box').style.display = 'block'; // Show question box
+
+		}
+
+		// Listen for Enter key to send a message
+		userInput.addEventListener('keydown', (event) => {
+			if (event.key === 'Enter') {
+				sendMessage();
+			}
+		});
+
+		function checkAnswers() {
+			// Collect answers for checkbox question 1
+			const question1 = Array.from(document.querySelectorAll('input[name="question1"]:checked'))
+				.map(checkbox => checkbox.value);
+
+			// Collect answers for checkbox question 2
+			const question2 = Array.from(document.querySelectorAll('input[name="question2"]:checked'))
+				.map(checkbox => checkbox.value);
+
+			const question3 = document.querySelector('input[name="question3"]:checked')?.value;
+			const question4 = document.querySelector('input[name="question4"]:checked')?.value;
+			const question5 = document.querySelector('input[name="question5"]:checked')?.value;
+
+			// console.log("hhh "+currentPage+" "+question1.length);
+
+			// Validation: Ensure all questions are answered
+			if (currentPage==1 && question1.length === 0) {
+				alert("Please select at least one option for the first question.");
+				currentPage = 1;
+				// navigatePage(0);
+				return false;
+			}
+
+			if (currentPage==2 && question2.length === 0) {
+				alert("Please select at least one option for the second question.");
+				currentPage = 2;
+				// navigatePage(0);
+				return false;
+			}
+
+			if (currentPage==3 && !question3) {
+				alert("Please select your preference for the third question.");
+				currentPage = 3;
+				// navigatePage(0);
+				return false;
+			}
+
+			if (currentPage==4 && !question4) {
+				alert("Please select your preference for the fourth question.");
+				currentPage = 4;
+				// navigatePage(0);
+				return false;
+			}
+
+			if (currentPage==5 && !question5) {
+				alert("Please select your preference for the last question.");
+				currentPage = 5;
+				// navigatePage(0);
+				return false;
+			}
+
+			return true;
+		}
+
+		function submitSurveyAnswers_v2() {
+			// Collect answers for checkbox question 1
+			const question1 = Array.from(document.querySelectorAll('input[name="question1"]:checked'))
+				.map(checkbox => checkbox.value);
+
+			// Collect answers for checkbox question 2
+			const question2 = Array.from(document.querySelectorAll('input[name="question2"]:checked'))
+				.map(checkbox => checkbox.value);
+
+			const question3 = document.querySelector('input[name="question3"]:checked')?.value;
+			const question4 = document.querySelector('input[name="question4"]:checked')?.value;
+			const question5 = document.querySelector('input[name="question5"]:checked')?.value;
+
+			// Send answers to the backend (optional)
+			const payload = {
+				question1,
+				question2,
+				question3,
+				question4,
+				question5,
+				prolificPID
+			};
+
+			fetch('https://XXXXXX.com:5000/survey', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(payload),
+			})
+				.then(response => response.json())
+				.then(data => {
+					console.log('Survey submitted:', data);
+					document.getElementById('survey-questions').style.display = "none";
+				})
+				.catch(error => {
+					console.error('Error submitting survey:', error);
+				});
+		}
+
+		function submitSurveyAnswers() {
+			// Collect answers for checkbox question 1
+			const question1 = Array.from(document.querySelectorAll('input[name="question1"]:checked'))
+				.map(checkbox => checkbox.value);
+
+			// Collect answers for checkbox question 2
+			const question2 = Array.from(document.querySelectorAll('input[name="question2"]:checked'))
+				.map(checkbox => checkbox.value);
+
+			const question3 = document.querySelector('input[name="question3"]:checked')?.value;
+			const question4 = document.querySelector('input[name="question4"]:checked')?.value;
+			const question5 = document.querySelector('input[name="question5"]:checked')?.value;
+
+			// Validation: Ensure all questions are answered
+			if (question1.length === 0) {
+				alert("Please select at least one option for the first question.");
+				currentPage = 1;
+				navigatePage(0);
+				return;
+			}
+
+			if (question2.length === 0) {
+				alert("Please select at least one option for the second question.");
+				currentPage = 2;
+				navigatePage(0);
+				return;
+			}
+
+			if (!question3) {
+				alert("Please select your preference for the third question.");
+				currentPage = 3;
+				navigatePage(0);
+				return;
+			}
+
+			if (!question4) {
+				alert("Please select your preference for the fourth question.");
+				currentPage = 4;
+				navigatePage(0);
+				return;
+			}
+
+			if (!question5) {
+				alert("Please select your preference for the last question.");
+				currentPage = 5;
+				navigatePage(0);
+				return;
+			}
+
+			document.getElementsByClassName('survey-container')[0].style.display = "none";
+			document.getElementById('instructions').style.display = "block";
+
+			const description = document.getElementById('description');
+			description.innerHTML = `<p style="font-size: 18px; color: #555; line-height: 1.5;">Thank you for finishing the personal questions. Please wait a bit and you will be directed to the survey questions.</p>`;
+
+
+			// Send answers to the backend (optional)
+			const payload = {
+				question1,
+				question2,
+				question3,
+				question4,
+				question5,
+				prolificPID
+			};
+
+			fetch('https://XXXXXX.com:5000/survey', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(payload),
+			})
+				.then(response => response.json())
+				.then(data => {
+					console.log('Survey submitted:', data);
+					document.getElementById('survey-questions').style.display = "none";
+					// document.getElementById('instructions').style.display = "block";
+				})
+				.catch(error => {
+					console.error('Error submitting survey:', error);
+				});
+		}
+
+	function startChat() {
+		resetChatbox();
+		selectQuestionAndChatbox();
+		displayQuestion();
+	}
+
+	</script>
+
+
+</body>
+</html>
