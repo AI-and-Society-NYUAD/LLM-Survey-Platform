@@ -148,5 +148,5 @@ Citation
       eprint={2505.04171},
       archivePrefix={arXiv},
       primaryClass={cs.CY},
-      url={https://arxiv.org/abs/2505.04171}, 
-   }
+      url={https://arxiv.org/abs/2505.04171}
+      }
