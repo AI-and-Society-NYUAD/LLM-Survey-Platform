@@ -360,6 +360,7 @@
 
 	<!-- Treatment: chat -->
 	<div id="chat-section" class="hidden">
+		<div id="chat-question" style="font-size:18px; background:#f9f9f9; border:1px solid #e2e2e2; border-radius:8px; padding:14px; margin-bottom:12px;"></div>
 		<div id="timer"></div>
 		<div class="turn-hint" id="turn-hint"></div>
 		<div id="chatbox"></div>
@@ -675,6 +676,12 @@
 		userInput().value = '';
 		userInput().disabled = false;
 		document.getElementById('chat-continue').disabled = true;
+
+		// Show the rolled proposal above the chatbox (same item used at post-stance).
+		const q = document.getElementById('chat-question');
+		q.innerHTML = '<span style="color:#555; font-size:15px;">Please discuss the following proposal with the assistant:</span><br><b></b>';
+		q.querySelector('b').appendChild(document.createTextNode(currentTopic.items[currentItemIndex]));
+		q.querySelector('b').appendChild(makeCanary());
 
 		postJSON('/start', { prolificPID, topic: currentTopic.key });
 
