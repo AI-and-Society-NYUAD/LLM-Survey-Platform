@@ -506,6 +506,11 @@ def chat():
             model=model_slug,
             messages=convo,
             max_tokens=1024,
+            # Disable provider "reasoning"/thinking: some models (e.g. Qwen 3.5)
+            # otherwise spend the whole token budget on hidden reasoning and return
+            # empty content, and reasoning adds large latency. Ignored by models
+            # that don't support it.
+            extra_body={"reasoning": {"enabled": False}},
         )
         ai_message = resp.choices[0].message.content
     except Exception as e:

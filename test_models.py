@@ -47,6 +47,7 @@ def main():
                 model=slug,
                 messages=[{"role": "user", "content": prompt}],
                 max_tokens=max_tokens,
+                extra_body={"reasoning": {"enabled": False}},  # match /chat
             )
             choice = resp.choices[0]
             content = (choice.message.content or "").strip()
