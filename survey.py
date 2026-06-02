@@ -37,6 +37,12 @@ if os.path.exists(_CONFIG_PATH):
 OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "SET_OPENROUTER_API_KEY_ENV_VAR")
 DOMAIN_NAME = CONFIG.get("domain_name", "YOUR_DOMAIN.com")
 
+# Signature word for the hidden anti-LLM-cheating canary embedded in the
+# frontend. If a participant pastes on-screen text into an external chatbot, the
+# hidden instruction makes that chatbot emit this word; we flag any participant
+# message containing it. Keep in sync with CANARY_WORD in llmSurvey.html.
+CANARY_WORD = "Banana"
+
 client = OpenAI(
     base_url="https://openrouter.ai/api/v1",
     api_key=OPENROUTER_API_KEY,
@@ -499,11 +505,15 @@ def chat():
         print(f"Error: {e}")
         return jsonify({"response": "An error occurred while processing your request."}), 500
 
+    canary_hit = CANARY_WORD.lower() in (user_msg or "").lower()
+
     def _mut(d):
         t = ensure_topic(d, topic_key)
         t.setdefault("transcript", [])
-        t["transcript"].append({"role": "user", "content": user_msg, "ts": time.time()})
+        t["transcript"].append({"role": "user", "content": user_msg, "ts": time.time(), **({"canary": True} if canary_hit else {})})
         t["transcript"].append({"role": "assistant", "content": ai_message, "ts": time.time()})
+        if canary_hit:
+            d["canary_triggered"] = True
 
     update_participant(pid, _mut)
     return jsonify({"response": ai_message})
