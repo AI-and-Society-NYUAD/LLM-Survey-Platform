@@ -310,17 +310,7 @@
 		</div>
 
 		<div class="question">
-			<p>16. How often do you use AI chatbots like ChatGPT, Claude, or Gemini?</p>
-			<label><input type="radio" name="llm_frequency" value="Never"> Never</label><br>
-			<label><input type="radio" name="llm_frequency" value="Less than monthly"> Less than monthly</label><br>
-			<label><input type="radio" name="llm_frequency" value="Monthly"> Monthly</label><br>
-			<label><input type="radio" name="llm_frequency" value="Weekly"> Weekly</label><br>
-			<label><input type="radio" name="llm_frequency" value="Daily"> Daily</label><br>
-			<label><input type="radio" name="llm_frequency" value="Multiple times per day"> Multiple times per day</label>
-		</div>
-
-		<div class="question">
-			<p>17. Have you ever discussed political or policy topics with an AI chatbot?</p>
+			<p>16. Have you ever discussed political or policy topics with an AI chatbot?</p>
 			<label><input type="radio" name="llm_politics_history" value="Never"> Never</label><br>
 			<label><input type="radio" name="llm_politics_history" value="Once or twice"> Once or twice</label><br>
 			<label><input type="radio" name="llm_politics_history" value="Occasionally"> Occasionally</label><br>
@@ -328,12 +318,12 @@
 		</div>
 
 		<div class="question">
-			<p>18. In general, how politically neutral or unbiased do you think AI chatbots are?</p>
+			<p>17. In general, how politically neutral or unbiased do you think AI chatbots are?</p>
 			<div class="scale" data-scale="perceived_neutrality_pre" data-min="1" data-max="7" data-low="Strongly biased" data-high="Completely neutral"></div>
 		</div>
 
 		<div class="question">
-			<p>19. How much do you trust information from AI chatbots about political and policy topics?</p>
+			<p>18. How much do you trust information from AI chatbots about political and policy topics?</p>
 			<div class="scale" data-scale="trust_pre" data-min="1" data-max="7" data-low="Not at all" data-high="Completely"></div>
 		</div>
 	</div>
@@ -373,9 +363,9 @@
 
 	<!-- §7.6 checks — asked after each conversation (chat arms only; skipped for control) -->
 	<div id="checks-section" class="hidden">
-		<h2>A few questions about that conversation</h2>
+		<h2 id="checks-heading">Your conversation</h2>
 		<div class="question">
-			<p>How politically neutral did the chatbot seem in this conversation?</p>
+			<p id="check-q1">How politically neutral did the chatbot seem in this conversation?</p>
 			<div class="scale" data-scale="perceived_neutrality" data-min="1" data-max="7" data-low="Strongly biased" data-high="Completely neutral"></div>
 		</div>
 		<div class="question">
@@ -383,7 +373,7 @@
 			<div class="scale" data-scale="self_reported_persuasion" data-min="1" data-max="7" data-low="Not at all" data-high="Substantially changed my views"></div>
 		</div>
 		<div class="question">
-			<p>How much would you trust this chatbot to give you accurate information about politics?</p>
+			<p id="check-q3">How much would you trust this chatbot to give you accurate information about politics?</p>
 			<div class="scale" data-scale="post_trust" data-min="1" data-max="7" data-low="Not at all" data-high="Completely"></div>
 		</div>
 		<div class="nav">
@@ -455,6 +445,9 @@
 	let currentItemIndex = 0;     // the single item shown for this topic
 	let stancePhase = 'post';     // 'post' (chat arm) | 'control'
 	let stanceSelections = {};    // itemIndex -> 'Support'|'Oppose'
+	let checksQueue = [];         // chat-arm topics, for the end-of-survey checks
+	let checksIdx = 0;
+	let currentChecksTopic = null;
 
 	let conversationHistory = [];
 	let userTurns = 0;
@@ -545,11 +538,10 @@
 			if (!getRadio('ideology')) return warn("Please answer the ideology question.");
 			if (!getRadio('political_interest')) return warn("Please answer the political-interest question.");
 		} else if (n === 4) {
-			if (!getRadio('llm_use_legacy')) return warn("Please answer question 18.");
-			if (!getRadio('llm_frequency')) return warn("Please answer question 19.");
-			if (!getRadio('llm_politics_history')) return warn("Please answer question 20.");
-			if (!getRadio('perceived_neutrality_pre')) return warn("Please answer question 21.");
-			if (!getRadio('trust_pre')) return warn("Please answer question 22.");
+			if (!getRadio('llm_use_legacy')) return warn("Please answer question 15.");
+			if (!getRadio('llm_politics_history')) return warn("Please answer question 16.");
+			if (!getRadio('perceived_neutrality_pre')) return warn("Please answer question 17.");
+			if (!getRadio('trust_pre')) return warn("Please answer question 18.");
 		}
 		return true;
 	}
@@ -573,7 +565,6 @@
 			ideology: getRadio('ideology'),
 			political_interest: getRadio('political_interest'),
 			llm_use_legacy: getRadio('llm_use_legacy'),
-			llm_frequency: getRadio('llm_frequency'),
 			llm_politics_history: getRadio('llm_politics_history'),
 			perceived_neutrality_pre: getRadio('perceived_neutrality_pre'),
 			trust_pre: getRadio('trust_pre'),
@@ -663,9 +654,9 @@
 			responses: stanceSelections,
 			item_index: currentItemIndex,
 		});
-		// chat arms (saw an LLM) get the post-conversation checks; control skips them
-		if (currentTopic.chat) showChecks();
-		else nextTopic();
+		// Post-conversation checks are now collected at the very end (one block per
+		// chat topic), so every topic just advances here.
+		nextTopic();
 	}
 
 	// ----- Treatment (chat) -----
@@ -785,18 +776,39 @@
 
 	function nextTopic() { topicIdx++; startTopic(); }
 
-	// ----- Per-topic §7.6 checks (chat arms only) -----
-	function showChecks() {
+	// ----- End-of-survey §7.6 checks: one block per topic the participant
+	//        conversed with an LLM about (chat arms only). -----
+	function finishStudy() {
+		checksQueue = assignedTopics.filter(t => t.chat);
+		checksIdx = 0;
+		if (checksQueue.length === 0) { completeStudy(); return; }
+		showChecksFor(0);
+	}
+
+	function showChecksFor(i) {
+		const t = checksQueue[i];
+		currentChecksTopic = t.key;
+		const name = t.name;
+		const lower = name.toLowerCase();
 		hideAllTopicSections();
+		document.getElementById('topic-intro').innerHTML = '';
 		const sec = document.getElementById('checks-section');
 		buildScales(sec);
+		document.getElementById('checks-heading').textContent =
+			`Your conversation about ${name}  (${i + 1} of ${checksQueue.length})`;
+		document.getElementById('check-q1').textContent =
+			`In your conversation with the AI about ${lower}, how politically neutral did the chatbot seem?`;
 		document.getElementById('check-q2').textContent =
-			`To what extent did this conversation change how you think about ${currentTopic.name.toLowerCase()}?`;
+			`In your conversation with the AI about ${lower}, to what extent did it change how you think about this topic?`;
+		document.getElementById('check-q3').textContent =
+			`Based on your conversation about ${lower}, how much would you trust this chatbot to give you accurate information about politics?`;
 		['perceived_neutrality', 'self_reported_persuasion', 'post_trust'].forEach(n => {
 			const sel = document.querySelector(`input[name="${n}"]:checked`);
 			if (sel) sel.checked = false;
 		});
 		document.getElementById('checks-continue').disabled = true;
+		document.getElementById('checks-continue').textContent =
+			(i === checksQueue.length - 1) ? 'Finish' : 'Continue';
 		sec.classList.remove('hidden');
 		window.scrollTo(0, 0);
 	}
@@ -809,15 +821,17 @@
 	function submitChecks() {
 		postJSON('/checks', {
 			prolificPID,
-			topic: currentTopic.key,
+			topic: currentChecksTopic,
 			perceived_neutrality: getRadio('perceived_neutrality'),
 			self_reported_persuasion: getRadio('self_reported_persuasion'),
 			post_trust: getRadio('post_trust'),
 		});
-		nextTopic();
+		checksIdx++;
+		if (checksIdx < checksQueue.length) showChecksFor(checksIdx);
+		else completeStudy();
 	}
 
-	function finishStudy() {
+	function completeStudy() {
 		document.getElementById('topic-flow').classList.add('hidden');
 		document.getElementById('completion').classList.remove('hidden');
 		window.scrollTo(0, 0);
