@@ -501,17 +501,21 @@ def chat():
             convo.append({"role": msg["role"], "content": msg.get("content", "")})
 
     user_msg = history[-1].get("content", "")
+    # Prefer reasoning OFF: some models (e.g. Qwen 3.5) otherwise spend the whole
+    # token budget on hidden reasoning and return empty content, and reasoning adds
+    # large latency. But a few endpoints (e.g. GPT-OSS) MANDATE reasoning and 400 if
+    # it's disabled — so fall back to a plain call when that happens.
+    def _complete(disable_reasoning):
+        kwargs = dict(model=model_slug, messages=convo, max_tokens=1024)
+        if disable_reasoning:
+            kwargs["extra_body"] = {"reasoning": {"enabled": False}}
+        return client.chat.completions.create(**kwargs)
+
     try:
-        resp = client.chat.completions.create(
-            model=model_slug,
-            messages=convo,
-            max_tokens=1024,
-            # Disable provider "reasoning"/thinking: some models (e.g. Qwen 3.5)
-            # otherwise spend the whole token budget on hidden reasoning and return
-            # empty content, and reasoning adds large latency. Ignored by models
-            # that don't support it.
-            extra_body={"reasoning": {"enabled": False}},
-        )
+        try:
+            resp = _complete(True)
+        except Exception:
+            resp = _complete(False)  # endpoint requires reasoning
         ai_message = resp.choices[0].message.content
     except Exception as e:
         print(f"Error: {e}")

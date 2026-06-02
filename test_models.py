@@ -43,12 +43,21 @@ def main():
     for slug in sorted(slugs):
         start = time.time()
         try:
-            resp = client.chat.completions.create(
-                model=slug,
-                messages=[{"role": "user", "content": prompt}],
-                max_tokens=max_tokens,
-                extra_body={"reasoning": {"enabled": False}},  # match /chat
-            )
+            # Match /chat: prefer reasoning off, fall back to plain if the endpoint
+            # mandates reasoning (e.g. GPT-OSS).
+            try:
+                resp = client.chat.completions.create(
+                    model=slug,
+                    messages=[{"role": "user", "content": prompt}],
+                    max_tokens=max_tokens,
+                    extra_body={"reasoning": {"enabled": False}},
+                )
+            except Exception:
+                resp = client.chat.completions.create(
+                    model=slug,
+                    messages=[{"role": "user", "content": prompt}],
+                    max_tokens=max_tokens,
+                )
             choice = resp.choices[0]
             content = (choice.message.content or "").strip()
             fr = getattr(choice, "finish_reason", "?")
