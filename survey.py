@@ -176,7 +176,6 @@ MODELS = {
             "GPT 3.5 Turbo": "openai/gpt-3.5-turbo",                # -1.00
             "GPT 4o": "openai/gpt-4o",                              # -1.00
             "DeepSeek V4 Flash": "deepseek/deepseek-v4-flash",      # -0.85 (10 runs)
-            "Nemotron 3 Super 120B": "nvidia/nemotron-3-super-120b-a12b",  # -0.80 (10 runs)
         },
     },
     "taxes": {  # user-assigned arms (no taxes column in the ideology CSV)
