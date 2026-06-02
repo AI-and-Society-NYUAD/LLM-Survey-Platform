@@ -34,32 +34,51 @@ def main():
         sys.exit(1)
 
     slugs = collect_slugs()
-    print(f"Testing {len(slugs)} unique model endpoints via OpenRouter...\n")
+    # Mirror the app: same max_tokens as /chat, and a prompt that needs a real answer.
+    max_tokens = 1024
+    prompt = "In one short sentence, give an argument about a US public-policy issue."
+    print(f"Testing {len(slugs)} unique model endpoints (max_tokens={max_tokens})...\n")
 
-    ok, fail = [], []
+    ok, empty, fail = [], [], []
     for slug in sorted(slugs):
         start = time.time()
         try:
             resp = client.chat.completions.create(
                 model=slug,
-                messages=[{"role": "user", "content": "Reply with the single word: ok"}],
-                max_tokens=16,
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=max_tokens,
             )
-            txt = (resp.choices[0].message.content or "").strip().replace("\n", " ")[:40]
-            print(f"PASS  {slug:42s} {time.time()-start:5.1f}s  «{txt}»")
-            ok.append(slug)
+            choice = resp.choices[0]
+            content = (choice.message.content or "").strip()
+            fr = getattr(choice, "finish_reason", "?")
+            reasoning = getattr(choice.message, "reasoning", None)
+            if reasoning is None and getattr(choice.message, "model_extra", None):
+                reasoning = choice.message.model_extra.get("reasoning")
+            dt = time.time() - start
+            if content:
+                print(f"PASS  {slug:42s} {dt:5.1f}s  finish={fr:8s} «{content[:50].replace(chr(10),' ')}»")
+                ok.append(slug)
+            else:
+                rlen = len(reasoning) if reasoning else 0
+                print(f"WARN  {slug:42s} {dt:5.1f}s  EMPTY content  finish={fr}  reasoning_chars={rlen}")
+                empty.append(slug)
         except Exception as e:
             msg = str(e).replace("\n", " ")[:140]
             print(f"FAIL  {slug:42s}        {msg}")
             fail.append((slug, msg))
 
-    print(f"\n{len(ok)} passed, {len(fail)} failed.")
+    print(f"\n{len(ok)} returned text, {len(empty)} empty, {len(fail)} failed.")
+    if empty:
+        print("\nEmpty (reachable but returned no content — likely reasoning models):")
+        for slug in empty:
+            print(f"  - {slug}  [{', '.join(slugs[slug])}]")
     if fail:
-        print("\nFailures (slug -> arms that use it):")
+        print("\nFailures:")
         for slug, msg in fail:
-            print(f"  - {slug}\n      error: {msg}\n      used by: {', '.join(slugs[slug])}")
+            print(f"  - {slug}: {msg}  [{', '.join(slugs[slug])}]")
+    if fail or empty:
         sys.exit(2)
-    print("\nAll model endpoints are responsive.")
+    print("\nAll model endpoints returned usable text.")
 
 
 if __name__ == "__main__":
