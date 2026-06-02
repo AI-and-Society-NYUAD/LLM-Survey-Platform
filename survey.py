@@ -163,6 +163,7 @@ MODELS = {
             "Mistral Nemo": "mistralai/mistral-nemo",               # -1.00
             "Llama 4 Maverick": "meta-llama/llama-4-maverick",      # -0.50
             "Gemma 2 27B": "google/gemma-2-27b-it",                 # -0.50
+            "GPT 4o": "openai/gpt-4o",                              # -0.50 (liberal across-topic anchor)
         },
     },
     "police": {
@@ -178,12 +179,14 @@ MODELS = {
             "DeepSeek V4 Flash": "deepseek/deepseek-v4-flash",      # -0.85 (10 runs)
         },
     },
-    "taxes": {  # user-assigned arms (no taxes column in the ideology CSV)
+    "taxes": {  # taxes scores from protocol §6 (CES 2024 CC24_341), not the CSV
         "conservative": {
-            "Grok 4.3": "x-ai/grok-4.3",  # user said "Grok 4"; bare grok-4 not on OpenRouter, using 4.3
+            "Grok 4.3": "x-ai/grok-4.3",          # user-assigned ("Grok 4")
+            "GPT-OSS 20B": "openai/gpt-oss-20b",  # +0.50 on the CC24_341 tax battery
         },
         "liberal": {
-            "GPT 4o": "openai/gpt-4o",
+            "GPT 4o": "openai/gpt-4o",            # user-assigned (-1.00 on CC24_341)
+            "GLM 5 Turbo": "z-ai/glm-5-turbo",    # -1.00 on CC24_341 (most liberal available)
         },
     },
 }
