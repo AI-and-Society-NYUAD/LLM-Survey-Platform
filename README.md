@@ -33,20 +33,25 @@ There are exactly **two** things to set for a deployment:
 
    | Key | What it is |
    |-----|------------|
-   | `api_base` | Full backend URL the frontend calls, e.g. `https://yourdomain.com` |
-   | `completion_code` | Prolific completion code shown at the end |
+   | `openrouter_api_key` | Your OpenRouter key (secret; or set the `OPENROUTER_API_KEY` env var instead) |
+   | `completion_code` | Prolific completion code, returned by `/complete` at the end |
    | `domain_name` | Your domain (used to derive cert paths if not given explicitly) |
-   | `port` | Backend port — `443` (standard HTTPS; Flask serves TLS directly) |
+   | `port` | Port for a direct `python survey.py` run (Gunicorn uses `-b` instead) |
    | `ssl_certfile` / `ssl_keyfile` | Absolute paths to your Let's Encrypt cert + key |
 
-2. **`OPENROUTER_API_KEY`** (secret) — set as an **environment variable**, never in
-   `config.json` (the browser can read that file). Export it before launching:
+   (The frontend gets `api_base` from its own page URL — see `API_PORT` in
+   `llmSurvey.html` — so there's no `api_base` in `config.json`.)
+
+2. **`OPENROUTER_API_KEY`** (secret) — put it in `config.json` as `openrouter_api_key`,
+   **or** set it as an environment variable (the env var overrides the file):
    ```bash
-   export OPENROUTER_API_KEY="sk-or-..."
+   export OPENROUTER_API_KEY="sk-or-..."   # optional; overrides config.json
    ```
 
-> Deploy `config.json` alongside `survey.py` on the backend host **and** alongside
-> `llmSurvey.html` on the static host (same values; each side reads what it needs).
+> `config.json` is **backend-only**: it lives next to `survey.py`, is never fetched
+> by the browser, and now holds the API key. **Never** place it in the web root and
+> **never** commit a real key to git. The frontend gets `api_base` from its own URL
+> and the completion code from `/complete`, so it needs no config file.
 
 ### Other things you may want to edit (in the source, not placeholders)
 - **`MODELS`** in `survey.py` — the per-topic, per-pole model roster, selected from
@@ -111,8 +116,8 @@ Two behavior toggles remain near the top of the `<script>` block:
 
 ## Quick start
 
-1. Fill in `config.json` (domain, `api_base`, ports, cert paths, completion code).
-2. `export OPENROUTER_API_KEY="sk-or-..."` on the backend host.
+1. Fill in `config.json` (OpenRouter key, domain, port, cert paths, completion code).
+2. (Optional) `export OPENROUTER_API_KEY="sk-or-..."` to override the key in `config.json`.
 3. Verify the `MODELS` slugs in `survey.py` against the live OpenRouter catalog.
 4. `pip install flask flask_cors openai gunicorn`
 5. Obtain certificates with Certbot.

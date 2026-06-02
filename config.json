@@ -1,6 +1,7 @@
 {
-  "_README": "BACKEND-ONLY settings for survey.py. Do NOT place this file in the web root — it is not fetched by the browser. The completion_code is returned to participants only via /complete after they finish, so keep this file private. The OpenRouter API key is NOT here; set it as the OPENROUTER_API_KEY environment variable.",
+  "_README": "BACKEND-ONLY settings for survey.py. This file now holds the OpenRouter API key (a SECRET). NEVER place this file in the web root (it must not be fetchable by the browser), and NEVER commit a real key to git. If set, the OPENROUTER_API_KEY environment variable overrides openrouter_api_key here.",
 
+  "openrouter_api_key": "",
   "completion_code": "2025_LLM",
 
   "domain_name": "YOUR_DOMAIN.com",

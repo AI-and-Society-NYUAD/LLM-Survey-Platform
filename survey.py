@@ -34,7 +34,14 @@ if os.path.exists(_CONFIG_PATH):
     with open(_CONFIG_PATH) as _f:
         CONFIG = json.load(_f)
 
-OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "SET_OPENROUTER_API_KEY_ENV_VAR")
+# Key resolution order: OPENROUTER_API_KEY env var (if set) overrides config.json's
+# "openrouter_api_key". config.json is safe to hold the key ONLY because it is
+# backend-only — never place config.json in the web root, and never commit a real key.
+OPENROUTER_API_KEY = (
+    os.environ.get("OPENROUTER_API_KEY")
+    or CONFIG.get("openrouter_api_key")
+    or "SET_OPENROUTER_API_KEY"
+)
 DOMAIN_NAME = CONFIG.get("domain_name", "YOUR_DOMAIN.com")
 
 # Signature word for the hidden anti-LLM-cheating canary embedded in the
