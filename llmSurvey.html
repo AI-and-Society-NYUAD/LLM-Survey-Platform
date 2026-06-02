@@ -391,7 +391,7 @@
 <div id="completion" class="block hidden" style="text-align:center;">
 	<p style="font-size: 22px; color: green; font-weight: bold;">Thank you for completing the survey!</p>
 	<p style="font-size: 18px;">Please use the following code back at Prolific:</p>
-	<p id="completion-code" style="font-size: 24px; font-weight: bold;">2025_LLM</p>
+	<p id="completion-code" style="font-size: 24px; font-weight: bold;">…</p>
 	<p style="font-size: 14px; color:#666; margin-top:20px;">
 		Debrief: In this study, some chatbots were deliberately set up to argue a particular political side of the topic, while others were set up to be balanced. The opinions expressed by these chatbots are products of their training data and configuration, not authoritative assessments of policy. Learn more about the original study from the research team.
 	</p>
@@ -401,21 +401,14 @@
 	// ---------------------------------------------------------------
 	// Config + participant id
 	// ---------------------------------------------------------------
-	// Defaults; overridden at load time by config.json (shared with the backend).
-	let API_BASE = "https://YOUR_DOMAIN.com";
-	let COMPLETION_CODE = "2025_LLM";
-
-	fetch('config.json')
-		.then(r => r.json())
-		.then(cfg => {
-			if (cfg.api_base) API_BASE = cfg.api_base;
-			if (cfg.completion_code) {
-				COMPLETION_CODE = cfg.completion_code;
-				const el = document.getElementById('completion-code');
-				if (el) el.textContent = COMPLETION_CODE;
-			}
-		})
-		.catch(() => console.warn('config.json not found; using built-in defaults.'));
+	// The backend lives at the same host on API_PORT. Derived from the page URL,
+	// so there is NO public config file to fetch. If you move the backend behind a
+	// reverse proxy on 443, set API_PORT to null (and add a path if needed).
+	const API_PORT = 5000;
+	const API_BASE = location.protocol + '//' + location.hostname + (API_PORT ? ':' + API_PORT : '');
+	// The completion code is delivered by the backend at /complete (only after the
+	// participant finishes), so it never lives in a publicly readable file.
+	let COMPLETION_CODE = '';
 
 	const CHAT_SECONDS = 300;   // 5 minutes
 	const MIN_TURNS = 4;        // minimum participant turns
@@ -797,9 +790,23 @@
 
 	function finishStudy() {
 		document.getElementById('topic-flow').classList.add('hidden');
-		postJSON('/complete', { prolificPID });
 		document.getElementById('completion').classList.remove('hidden');
 		window.scrollTo(0, 0);
+		// The completion code comes back from the backend (kept out of any public file).
+		fetch(API_BASE + '/complete', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ prolificPID }),
+		})
+			.then(r => r.json())
+			.then(d => {
+				const el = document.getElementById('completion-code');
+				if (d && d.completion_code && el) {
+					COMPLETION_CODE = d.completion_code;
+					el.textContent = d.completion_code;
+				}
+			})
+			.catch(err => console.error('Error completing:', err));
 	}
 
 	// ---------------------------------------------------------------

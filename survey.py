@@ -619,7 +619,7 @@ def complete():
         d["completed"] = time.time()
 
     update_participant(pid, _mut)
-    return jsonify({"status": "success"})
+    return jsonify({"status": "success", "completion_code": CONFIG.get("completion_code", "")})
 
 
 if __name__ == "__main__":
