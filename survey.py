@@ -525,17 +525,27 @@ def chat():
         kwargs = dict(model=model_slug, messages=convo, max_tokens=1024)
         if disable_reasoning:
             kwargs["extra_body"] = {"reasoning": {"enabled": False}}
-        return client.chat.completions.create(**kwargs)
+        r = client.chat.completions.create(**kwargs)
+        # Some providers occasionally return a 200 with no choices; treat as failure
+        # so the caller can retry rather than crashing on r.choices[0].
+        if not getattr(r, "choices", None):
+            raise RuntimeError("response had no choices")
+        return r.choices[0].message.content
 
+    ai_message = None
     try:
         try:
-            resp = _complete(True)
+            ai_message = _complete(True)        # prefer reasoning off
         except Exception:
-            resp = _complete(False)  # endpoint requires reasoning
-        ai_message = resp.choices[0].message.content
+            ai_message = _complete(False)        # mandates reasoning, or transient error
+        if not ai_message:                       # empty content -> one plain retry
+            ai_message = _complete(False)
     except Exception as e:
         print(f"Error: {e}")
         return jsonify({"response": "An error occurred while processing your request."}), 500
+
+    if not ai_message:
+        ai_message = "Sorry, I'm having trouble responding right now. Please send your message again."
 
     canary_hit = CANARY_WORD.lower() in (user_msg or "").lower()
 

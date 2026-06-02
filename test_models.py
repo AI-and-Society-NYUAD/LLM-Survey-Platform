@@ -58,6 +58,8 @@ def main():
                     messages=[{"role": "user", "content": prompt}],
                     max_tokens=max_tokens,
                 )
+            if not getattr(resp, "choices", None):
+                raise RuntimeError("response had no choices (provider returned empty)")
             choice = resp.choices[0]
             content = (choice.message.content or "").strip()
             fr = getattr(choice, "finish_reason", "?")
