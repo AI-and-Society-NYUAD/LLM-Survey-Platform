@@ -24,26 +24,46 @@ This repository has two components:
 
 ---
 
-## Backend: `survey.py`
+## Configuration — what you need to fill in
 
-### Configuration (top of the file)
-- **`OPENROUTER_API_KEY`** — read from the environment variable of the same name
-  (falls back to a placeholder). Export it before launching:
-  ```bash
-  export OPENROUTER_API_KEY="sk-or-..."
-  ```
-- **`DOMAIN_NAME`** — your domain, used for the Let's Encrypt cert paths.
-- **`MODELS`** — the per-topic, per-pole model roster (protocol §6). The protocol
-  model names are kept as comments; **verify and edit the OpenRouter slugs** on the
-  right-hand side against the live OpenRouter catalog before launch — several
-  models are uncommon and may use different slugs or be unavailable.
-- **`CONDITION_WEIGHTS`** — allocation ratios (default 1/3 · 1/3 · 1/6 · 1/6).
-- **System prompts** — `NEUTRAL_PROMPTS` (Appendix A, verbatim) and
-  `POLE_POSITIONS` (one-line stance per topic used to build the persuasive prompts).
+There are exactly **two** things to set for a deployment:
+
+1. **`config.json`** (non-secret) — read by *both* `survey.py` (from disk) and
+   `llmSurvey.html` (fetched by the browser at load). Fill in:
+
+   | Key | What it is |
+   |-----|------------|
+   | `api_base` | Full backend URL the frontend calls, e.g. `https://yourdomain.com:5000` |
+   | `completion_code` | Prolific completion code shown at the end |
+   | `domain_name` | Your domain (used to derive cert paths if not given explicitly) |
+   | `port` | Backend port (default 5000) |
+   | `ssl_certfile` / `ssl_keyfile` | Absolute paths to your Let's Encrypt cert + key |
+
+2. **`OPENROUTER_API_KEY`** (secret) — set as an **environment variable**, never in
+   `config.json` (the browser can read that file). Export it before launching:
+   ```bash
+   export OPENROUTER_API_KEY="sk-or-..."
+   ```
+
+> Deploy `config.json` alongside `survey.py` on the backend host **and** alongside
+> `llmSurvey.html` on the static host (same values; each side reads what it needs).
+
+### Other things you may want to edit (in the source, not placeholders)
+- **`MODELS`** in `survey.py` — the per-topic, per-pole model roster, selected from
+  the ideology scores and pinned to OpenRouter slugs. **Re-verify the slugs** against
+  the live catalog before launch.
+- **`CONDITION_WEIGHTS`** — arm allocation ratios (default 1/3 · 1/3 · 1/6 · 1/6).
+- **System prompts** — `NEUTRAL_PROMPTS` and `POLE_POSITIONS` in `survey.py`.
+- Consent / instrument questions / debrief text in `llmSurvey.html`.
+
+---
+
+## Backend: `survey.py`
 
 ### Endpoints
 `/assign` (balanced per-topic assignment, single-blind view to the client),
-`/chat`, `/start`, `/end` (timing), `/stance` (pre/post), `/checks` (§7.6),
+`/chat`, `/start`, `/end` (timing), `/stance` (post-treatment stance),
+`/checks` (per-conversation §7.6 checks, chat arms only),
 `/survey` (pre-treatment instrument), `/complete`.
 
 ### Data output
@@ -79,28 +99,25 @@ Ensure your DNS A record points `mydomain.com` to your server's IP.
 
 ## Frontend: `llmSurvey.html`
 
-Host on any static web server (Apache, Nginx, ...). Things to configure in the
-`<script>` block near the bottom:
+Host on any static web server (Apache, Nginx, ...), with `config.json` in the same
+directory. `API_BASE` and the completion code come from `config.json` at load time.
+Two behavior toggles remain near the top of the `<script>` block:
 
-- **`API_BASE`** — replace `https://XXXXXX.com:5000` with your backend URL.
-- **`CHAT_SECONDS`** — conversation length (default 420 = 7 min).
+- **`CHAT_SECONDS`** — conversation length (default 300 = 5 min).
 - **`MIN_TURNS`** — minimum participant messages before "Continue" unlocks (default 4).
-- **`POST_ONLY`** — set `true` to skip the pre-stance for chat arms (post-only mode).
-
-Other editable content: the consent form, the pre-treatment instrument
-questions, the completion code, and the debrief text on the completion screen.
 
 ---
 
 ## Quick start
 
-1. `export OPENROUTER_API_KEY=...` and edit `DOMAIN_NAME` + verify `MODELS` slugs in `survey.py`.
-2. Set `API_BASE` (and any toggles) in `llmSurvey.html`.
-3. `pip install flask flask_cors openai gunicorn`
-4. Obtain certificates with Certbot.
-5. Run the backend with Gunicorn (command above).
-6. Host `llmSurvey.html` and point your DNS at the server.
-7. Visit `https://mydomain.com/llmSurvey.html?PROLIFIC_PID=test` and walk the flow.
+1. Fill in `config.json` (domain, `api_base`, ports, cert paths, completion code).
+2. `export OPENROUTER_API_KEY="sk-or-..."` on the backend host.
+3. Verify the `MODELS` slugs in `survey.py` against the live OpenRouter catalog.
+4. `pip install flask flask_cors openai gunicorn`
+5. Obtain certificates with Certbot.
+6. Run the backend with Gunicorn (command above).
+7. Host `llmSurvey.html` **and** `config.json` together, and point your DNS at the server.
+8. Visit `https://yourdomain.com/llmSurvey.html?PROLIFIC_PID=test` and walk the flow.
 
 ---
 

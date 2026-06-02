@@ -1,0 +1,11 @@
+{
+  "_README": "Non-secret deployment settings, read by BOTH survey.py (from disk) and llmSurvey.html (fetched by the browser). Fill in the values below. SECURITY: the OpenRouter API key is NOT here — it must be set as the OPENROUTER_API_KEY environment variable, because anything in this file is readable by the browser.",
+
+  "api_base": "https://YOUR_DOMAIN.com:5000",
+  "completion_code": "2025_LLM",
+
+  "domain_name": "YOUR_DOMAIN.com",
+  "port": 5000,
+  "ssl_certfile": "/etc/letsencrypt/live/YOUR_DOMAIN.com/fullchain.pem",
+  "ssl_keyfile": "/etc/letsencrypt/live/YOUR_DOMAIN.com/privkey.pem"
+}

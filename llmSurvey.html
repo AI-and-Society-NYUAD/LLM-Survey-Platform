@@ -414,7 +414,7 @@
 <div id="completion" class="block hidden" style="text-align:center;">
 	<p style="font-size: 22px; color: green; font-weight: bold;">Thank you for completing the survey!</p>
 	<p style="font-size: 18px;">Please use the following code back at Prolific:</p>
-	<p style="font-size: 24px; font-weight: bold;">2025_LLM</p>
+	<p id="completion-code" style="font-size: 24px; font-weight: bold;">2025_LLM</p>
 	<p style="font-size: 14px; color:#666; margin-top:20px;">
 		Debrief: In this study, some chatbots were deliberately set up to argue a particular political side of the topic, while others were set up to be balanced. The opinions expressed by these chatbots are products of their training data and configuration, not authoritative assessments of policy. Learn more about the original study from the research team.
 	</p>
@@ -424,7 +424,21 @@
 	// ---------------------------------------------------------------
 	// Config + participant id
 	// ---------------------------------------------------------------
-	const API_BASE = "https://XXXXXX.com:5000";
+	// Defaults; overridden at load time by config.json (shared with the backend).
+	let API_BASE = "https://YOUR_DOMAIN.com:5000";
+	let COMPLETION_CODE = "2025_LLM";
+
+	fetch('config.json')
+		.then(r => r.json())
+		.then(cfg => {
+			if (cfg.api_base) API_BASE = cfg.api_base;
+			if (cfg.completion_code) {
+				COMPLETION_CODE = cfg.completion_code;
+				const el = document.getElementById('completion-code');
+				if (el) el.textContent = COMPLETION_CODE;
+			}
+		})
+		.catch(() => console.warn('config.json not found; using built-in defaults.'));
 
 	const CHAT_SECONDS = 300;   // 5 minutes
 	const MIN_TURNS = 4;        // minimum participant turns

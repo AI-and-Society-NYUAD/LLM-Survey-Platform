@@ -25,8 +25,17 @@ CORS(app)
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
-OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "XXXXXXXXX")
-DOMAIN_NAME = "XXXXX.com"
+# Non-secret deployment settings live in config.json (shared with the frontend).
+# The OpenRouter API key is the ONE secret and is read from the environment only
+# — never put it in config.json, which the browser can read.
+CONFIG = {}
+_CONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
+if os.path.exists(_CONFIG_PATH):
+    with open(_CONFIG_PATH) as _f:
+        CONFIG = json.load(_f)
+
+OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "SET_OPENROUTER_API_KEY_ENV_VAR")
+DOMAIN_NAME = CONFIG.get("domain_name", "YOUR_DOMAIN.com")
 
 client = OpenAI(
     base_url="https://openrouter.ai/api/v1",
@@ -614,12 +623,11 @@ def complete():
 
 
 if __name__ == "__main__":
+    certfile = CONFIG.get("ssl_certfile", f"/etc/letsencrypt/live/{DOMAIN_NAME}/fullchain.pem")
+    keyfile = CONFIG.get("ssl_keyfile", f"/etc/letsencrypt/live/{DOMAIN_NAME}/privkey.pem")
     app.run(
         host="0.0.0.0",
-        port=5000,
+        port=CONFIG.get("port", 5000),
         debug=True,
-        ssl_context=(
-            "/etc/letsencrypt/live/" + DOMAIN_NAME + "/fullchain.pem",
-            "/etc/letsencrypt/live/" + DOMAIN_NAME + "/privkey.pem",
-        ),
+        ssl_context=(certfile, keyfile),
     )
