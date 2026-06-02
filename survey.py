@@ -181,8 +181,8 @@ MODELS = {
     },
     "taxes": {  # taxes scores from protocol §6 (CES 2024 CC24_341), not the CSV
         "conservative": {
-            "Grok 4.3": "x-ai/grok-4.3",                 # user-assigned ("Grok 4")
-            "Mistral Large": "mistralai/mistral-large",  # no taxes score; reliable arguer, also conservative on police
+            "Grok 4.3": "x-ai/grok-4.3",             # user-assigned ("Grok 4")
+            "Qwen 3.5 35B": "qwen/qwen3.5-35b-a3b",  # also the conservative model on guns; taxes stance via system prompt
         },
         "liberal": {
             "GPT 4o": "openai/gpt-4o",            # user-assigned (-1.00 on CC24_341)
