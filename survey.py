@@ -41,7 +41,7 @@ DOMAIN_NAME = CONFIG.get("domain_name", "YOUR_DOMAIN.com")
 # frontend. If a participant pastes on-screen text into an external chatbot, the
 # hidden instruction makes that chatbot emit this word; we flag any participant
 # message containing it. Keep in sync with CANARY_WORD in llmSurvey.html.
-CANARY_WORD = "Banana"
+CANARY_WORD = "tapestry"
 
 client = OpenAI(
     base_url="https://openrouter.ai/api/v1",
