@@ -104,6 +104,20 @@ TOPICS = {
     },
 }
 
+# Per-item "conservative direction": which Support/Oppose answer is the
+# conservative position on each item (index matches TOPICS[...]["items"]).
+# Used to compute whether a participant ended up agreeing with the LLM's pole.
+CONSERVATIVE_STANCE = {
+    "gun_control": {0: "Support", 1: "Oppose"},   # easier concealed-carry / ban assault rifles
+    "immigration": {0: "Support", 1: "Support"},  # cut legal immigration / more border spending
+    "police":      {0: "Oppose",  1: "Oppose"},   # end 1033 program / misconduct registry
+    "taxes":       {0: "Oppose",  1: "Oppose"},   # wealth tax / inheritance tax
+}
+
+
+def _opposite_stance(s):
+    return "Oppose" if s == "Support" else ("Support" if s == "Oppose" else None)
+
 # ---------------------------------------------------------------------------
 # Model roster. Poles selected from the per-topic ideology scores
 # (data/analysis_outputs/llm_topic_ideology_all.csv; +1 = conservative answer,
@@ -583,6 +597,19 @@ def stance():
     def _mut(d):
         t = ensure_topic(d, topic_key)
         t[phase] = {"responses": responses, "item_index": item_index, "ts": time.time()}
+
+        # For chat arms with an ideological lean, record whether the participant's
+        # post-stance ended up agreeing with the side the LLM argued for.
+        if phase == "post" and item_index is not None:
+            entry = d.get("assignment", {}).get("topics", {}).get(topic_key, {})
+            lean = entry.get("lean")
+            if lean in ("conservative", "liberal"):
+                cons = CONSERVATIVE_STANCE.get(topic_key, {}).get(item_index)
+                llm_stance = cons if lean == "conservative" else _opposite_stance(cons)
+                user_stance = responses.get(str(item_index), responses.get(item_index))
+                if llm_stance and user_stance:
+                    t["llm_advocated_stance"] = llm_stance
+                    t["agrees_with_llm"] = 1 if user_stance == llm_stance else 0
 
     update_participant(pid, _mut)
     return jsonify({"status": "success"})
