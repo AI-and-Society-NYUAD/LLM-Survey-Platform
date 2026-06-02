@@ -33,10 +33,10 @@ There are exactly **two** things to set for a deployment:
 
    | Key | What it is |
    |-----|------------|
-   | `api_base` | Full backend URL the frontend calls, e.g. `https://yourdomain.com:5000` |
+   | `api_base` | Full backend URL the frontend calls, e.g. `https://yourdomain.com` |
    | `completion_code` | Prolific completion code shown at the end |
    | `domain_name` | Your domain (used to derive cert paths if not given explicitly) |
-   | `port` | Backend port (default 5000) |
+   | `port` | Backend port — `443` (standard HTTPS; Flask serves TLS directly) |
    | `ssl_certfile` / `ssl_keyfile` | Absolute paths to your Let's Encrypt cert + key |
 
 2. **`OPENROUTER_API_KEY`** (secret) — set as an **environment variable**, never in
@@ -79,14 +79,15 @@ pip install flask flask_cors openai gunicorn
 
 ### Running with Gunicorn + HTTPS
 ```bash
-gunicorn -w 4 \
+sudo gunicorn -w 4 \
   --certfile=/etc/letsencrypt/live/mydomain.com/fullchain.pem \
   --keyfile=/etc/letsencrypt/live/mydomain.com/privkey.pem \
-  -b 0.0.0.0:5000 survey:app
+  -b 0.0.0.0:443 survey:app
 ```
 
-> Note: `survey.py` uses file locks (`flock`) for the shared balancing state, so
-> the multi-worker (`-w 4`) Gunicorn setup is safe.
+> Notes: binding port 443 needs elevated privileges (hence `sudo`, or grant the
+> capability another way). `survey.py` uses file locks (`flock`) for the shared
+> balancing state, so the multi-worker (`-w 4`) Gunicorn setup is safe.
 
 ### Certificates (Let's Encrypt)
 ```bash

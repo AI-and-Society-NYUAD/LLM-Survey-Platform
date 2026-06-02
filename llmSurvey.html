@@ -289,29 +289,6 @@
 			<p>14. How interested are you in politics?</p>
 			<div class="scale" data-scale="political_interest" data-min="1" data-max="7" data-low="Not at all" data-high="Extremely"></div>
 		</div>
-
-		<div class="question">
-			<p>15. Which party currently controls the US House of Representatives?</p>
-			<label><input type="radio" name="pk_house" value="Democrats"> Democrats</label><br>
-			<label><input type="radio" name="pk_house" value="Republicans"> Republicans</label><br>
-			<label><input type="radio" name="pk_house" value="Neither"> Neither / Don't know</label>
-		</div>
-
-		<div class="question">
-			<p>16. How many years is a full term for a US Senator?</p>
-			<label><input type="radio" name="pk_senate" value="2"> 2 years</label><br>
-			<label><input type="radio" name="pk_senate" value="4"> 4 years</label><br>
-			<label><input type="radio" name="pk_senate" value="6"> 6 years</label><br>
-			<label><input type="radio" name="pk_senate" value="dont_know"> Don't know</label>
-		</div>
-
-		<div class="question">
-			<p>17. Whose responsibility is it to determine if a law is constitutional?</p>
-			<label><input type="radio" name="pk_court" value="Congress"> Congress</label><br>
-			<label><input type="radio" name="pk_court" value="President"> The President</label><br>
-			<label><input type="radio" name="pk_court" value="Supreme Court"> The Supreme Court</label><br>
-			<label><input type="radio" name="pk_court" value="dont_know"> Don't know</label>
-		</div>
 	</div>
 
 	<!-- Page 4: LLM familiarity (7.3) and beliefs (7.4) -->
@@ -319,7 +296,7 @@
 		<h2>AI chatbots</h2>
 
 		<div class="question">
-			<p>18. How often do you use Large Language Models such as ChatGPT in your work or personal life?</p>
+			<p>15. How often do you use Large Language Models such as ChatGPT in your work or personal life?</p>
 			<label><input type="radio" name="llm_use_legacy" value="Never"> <b>Never:</b> I do not use these tools.</label><br>
 			<label><input type="radio" name="llm_use_legacy" value="Rarely"> <b>Rarely:</b> less than once a month.</label><br>
 			<label><input type="radio" name="llm_use_legacy" value="Sometimes"> <b>Sometimes:</b> a few times a month.</label><br>
@@ -328,7 +305,7 @@
 		</div>
 
 		<div class="question">
-			<p>19. How often do you use AI chatbots like ChatGPT, Claude, or Gemini?</p>
+			<p>16. How often do you use AI chatbots like ChatGPT, Claude, or Gemini?</p>
 			<label><input type="radio" name="llm_frequency" value="Never"> Never</label><br>
 			<label><input type="radio" name="llm_frequency" value="Less than monthly"> Less than monthly</label><br>
 			<label><input type="radio" name="llm_frequency" value="Monthly"> Monthly</label><br>
@@ -338,7 +315,7 @@
 		</div>
 
 		<div class="question">
-			<p>20. Have you ever discussed political or policy topics with an AI chatbot?</p>
+			<p>17. Have you ever discussed political or policy topics with an AI chatbot?</p>
 			<label><input type="radio" name="llm_politics_history" value="Never"> Never</label><br>
 			<label><input type="radio" name="llm_politics_history" value="Once or twice"> Once or twice</label><br>
 			<label><input type="radio" name="llm_politics_history" value="Occasionally"> Occasionally</label><br>
@@ -346,12 +323,12 @@
 		</div>
 
 		<div class="question">
-			<p>21. In general, how politically neutral or unbiased do you think AI chatbots are?</p>
+			<p>18. In general, how politically neutral or unbiased do you think AI chatbots are?</p>
 			<div class="scale" data-scale="perceived_neutrality_pre" data-min="1" data-max="7" data-low="Strongly biased" data-high="Completely neutral"></div>
 		</div>
 
 		<div class="question">
-			<p>22. How much do you trust information from AI chatbots about political and policy topics?</p>
+			<p>19. How much do you trust information from AI chatbots about political and policy topics?</p>
 			<div class="scale" data-scale="trust_pre" data-min="1" data-max="7" data-low="Not at all" data-high="Completely"></div>
 		</div>
 	</div>
@@ -425,7 +402,7 @@
 	// Config + participant id
 	// ---------------------------------------------------------------
 	// Defaults; overridden at load time by config.json (shared with the backend).
-	let API_BASE = "https://YOUR_DOMAIN.com:5000";
+	let API_BASE = "https://YOUR_DOMAIN.com";
 	let COMPLETION_CODE = "2025_LLM";
 
 	fetch('config.json')
@@ -553,7 +530,6 @@
 			if (!getRadio('party_id')) return warn("Please answer the party question.");
 			if (!getRadio('ideology')) return warn("Please answer the ideology question.");
 			if (!getRadio('political_interest')) return warn("Please answer the political-interest question.");
-			if (!getRadio('pk_house') || !getRadio('pk_senate') || !getRadio('pk_court')) return warn("Please answer all three knowledge questions.");
 		} else if (n === 4) {
 			if (!getRadio('llm_use_legacy')) return warn("Please answer question 18.");
 			if (!getRadio('llm_frequency')) return warn("Please answer question 19.");
@@ -582,9 +558,6 @@
 			party_id: getRadio('party_id'),
 			ideology: getRadio('ideology'),
 			political_interest: getRadio('political_interest'),
-			pk_house: getRadio('pk_house'),
-			pk_senate: getRadio('pk_senate'),
-			pk_court: getRadio('pk_court'),
 			llm_use_legacy: getRadio('llm_use_legacy'),
 			llm_frequency: getRadio('llm_frequency'),
 			llm_politics_history: getRadio('llm_politics_history'),
