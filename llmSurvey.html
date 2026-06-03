@@ -149,7 +149,6 @@
 	<!-- Page 1: existing media / engagement items -->
 	<div class="instrument-page" data-page="1">
 		<h2>About you</h2>
-
 		<div class="question">
 			<p>1. In the past 24 hours have you... (check all that apply)</p>
 			<label><input type="checkbox" name="media" value="social_media"> Used social media (such as Facebook or YouTube)</label><br>
@@ -158,7 +157,10 @@
 			<label><input type="checkbox" name="media" value="radio_news"> Listened to a radio news program or talk radio</label><br>
 			<label><input type="checkbox" name="media" value="none"> None of these</label>
 		</div>
+	</div>
 
+	<div class="instrument-page hidden" data-page="2">
+		<h2>About you</h2>
 		<div class="question">
 			<p>2. Which of these networks did you watch? (check all that apply)</p>
 			<label><input type="checkbox" name="networks" value="ABC"> ABC</label><br>
@@ -171,7 +173,10 @@
 			<label><input type="checkbox" name="networks" value="Other"> Other</label><br>
 			<label><input type="checkbox" name="networks" value="none"> None of these</label>
 		</div>
+	</div>
 
+	<div class="instrument-page hidden" data-page="3">
+		<h2>About you</h2>
 		<div class="question">
 			<p>3. Would you say you follow what's going on in government and public affairs ...</p>
 			<label><input type="radio" name="follow_govt" value="most_of_the_time"> Most of the time</label><br>
@@ -180,7 +185,10 @@
 			<label><input type="radio" name="follow_govt" value="hardly_at_all"> Hardly at all</label><br>
 			<label><input type="radio" name="follow_govt" value="dont_know"> Don't know</label>
 		</div>
+	</div>
 
+	<div class="instrument-page hidden" data-page="4">
+		<h2>About you</h2>
 		<div class="question">
 			<p>4. We sometimes find people don't always take surveys seriously, instead providing humorous or insincere responses. How often do you do this?</p>
 			<label><input type="radio" name="satisficing" value="Never"> Never</label><br>
@@ -193,7 +201,7 @@
 
 	<!-- Page 2: demographics (7.1) -->
 	<!-- Demographics (7.1) — one question per page -->
-	<div class="instrument-page hidden" data-page="2">
+	<div class="instrument-page hidden" data-page="5">
 		<h2>Demographics</h2>
 		<div class="question">
 			<p>5. What is your age?</p>
@@ -201,7 +209,7 @@
 		</div>
 	</div>
 
-	<div class="instrument-page hidden" data-page="3">
+	<div class="instrument-page hidden" data-page="6">
 		<h2>Demographics</h2>
 		<div class="question">
 			<p>6. What is your gender?</p>
@@ -213,7 +221,7 @@
 		</div>
 	</div>
 
-	<div class="instrument-page hidden" data-page="4">
+	<div class="instrument-page hidden" data-page="7">
 		<h2>Demographics</h2>
 		<div class="question">
 			<p>7. Race / ethnicity (check all that apply)</p>
@@ -229,7 +237,7 @@
 		</div>
 	</div>
 
-	<div class="instrument-page hidden" data-page="5">
+	<div class="instrument-page hidden" data-page="8">
 		<h2>Demographics</h2>
 		<div class="question">
 			<p>8. Highest level of education completed</p>
@@ -245,7 +253,7 @@
 		</div>
 	</div>
 
-	<div class="instrument-page hidden" data-page="6">
+	<div class="instrument-page hidden" data-page="9">
 		<h2>Demographics</h2>
 		<div class="question">
 			<p>9. Household income bracket</p>
@@ -263,7 +271,7 @@
 		</div>
 	</div>
 
-	<div class="instrument-page hidden" data-page="7">
+	<div class="instrument-page hidden" data-page="10">
 		<h2>Demographics</h2>
 		<div class="question">
 			<p>10. State or ZIP code</p>
@@ -271,7 +279,7 @@
 		</div>
 	</div>
 
-	<div class="instrument-page hidden" data-page="8">
+	<div class="instrument-page hidden" data-page="11">
 		<h2>Demographics</h2>
 		<div class="question">
 			<p>11. Primary language at home</p>
@@ -281,10 +289,9 @@
 		</div>
 	</div>
 
-	<!-- Page 9: political identity (7.2) -->
-	<div class="instrument-page hidden" data-page="9">
+	<!-- Political identity (7.2) — one question per page -->
+	<div class="instrument-page hidden" data-page="12">
 		<h2>Political views</h2>
-
 		<div class="question">
 			<p>12. Generally speaking, do you think of yourself as a ...</p>
 			<label><input type="radio" name="party_id" value="Strong Democrat"> Strong Democrat</label><br>
@@ -295,7 +302,10 @@
 			<label><input type="radio" name="party_id" value="Not very strong Republican"> Not very strong Republican</label><br>
 			<label><input type="radio" name="party_id" value="Strong Republican"> Strong Republican</label>
 		</div>
+	</div>
 
+	<div class="instrument-page hidden" data-page="13">
+		<h2>Political views</h2>
 		<div class="question">
 			<p>13. Where would you place yourself on this scale?</p>
 			<label><input type="radio" name="ideology" value="Very liberal"> Very liberal</label><br>
@@ -307,17 +317,19 @@
 			<label><input type="radio" name="ideology" value="Very conservative"> Very conservative</label><br>
 			<label><input type="radio" name="ideology" value="dont_know"> I don't know / Haven't thought much about it</label>
 		</div>
+	</div>
 
+	<div class="instrument-page hidden" data-page="14">
+		<h2>Political views</h2>
 		<div class="question">
 			<p>14. How interested are you in politics?</p>
 			<div class="scale" data-scale="political_interest" data-min="1" data-max="7" data-low="Not at all" data-high="Extremely"></div>
 		</div>
 	</div>
 
-	<!-- Page 10: LLM familiarity (7.3) and beliefs (7.4) -->
-	<div class="instrument-page hidden" data-page="10">
+	<!-- AI familiarity (7.3) and beliefs (7.4) — one question per page -->
+	<div class="instrument-page hidden" data-page="15">
 		<h2>AI chatbots</h2>
-
 		<div class="question">
 			<p>15. How often do you use Large Language Models such as ChatGPT in your work or personal life?</p>
 			<label><input type="radio" name="llm_use_legacy" value="Never"> <b>Never:</b> I do not use these tools.</label><br>
@@ -326,7 +338,10 @@
 			<label><input type="radio" name="llm_use_legacy" value="Often"> <b>Often:</b> several times a week.</label><br>
 			<label><input type="radio" name="llm_use_legacy" value="Very often"> <b>Very often:</b> daily or multiple times a day.</label>
 		</div>
+	</div>
 
+	<div class="instrument-page hidden" data-page="16">
+		<h2>AI chatbots</h2>
 		<div class="question">
 			<p>16. Have you ever discussed political or policy topics with an AI chatbot?</p>
 			<label><input type="radio" name="llm_politics_history" value="Never"> Never</label><br>
@@ -334,12 +349,18 @@
 			<label><input type="radio" name="llm_politics_history" value="Occasionally"> Occasionally</label><br>
 			<label><input type="radio" name="llm_politics_history" value="Frequently"> Frequently</label>
 		</div>
+	</div>
 
+	<div class="instrument-page hidden" data-page="17">
+		<h2>AI chatbots</h2>
 		<div class="question">
 			<p>17. In general, how politically neutral or unbiased do you think AI chatbots are?</p>
 			<div class="scale" data-scale="perceived_neutrality_pre" data-min="1" data-max="7" data-low="Strongly biased" data-high="Completely neutral"></div>
 		</div>
+	</div>
 
+	<div class="instrument-page hidden" data-page="18">
+		<h2>AI chatbots</h2>
 		<div class="question">
 			<p>18. How much do you trust information from AI chatbots about political and policy topics?</p>
 			<div class="scale" data-scale="trust_pre" data-min="1" data-max="7" data-low="Not at all" data-high="Completely"></div>
