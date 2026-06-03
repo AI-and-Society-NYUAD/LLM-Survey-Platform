@@ -119,80 +119,83 @@ def _opposite_stance(s):
     return "Oppose" if s == "Support" else ("Support" if s == "Oppose" else None)
 
 # ---------------------------------------------------------------------------
-# Model roster. Poles selected from the per-topic ideology scores
-# (data/analysis_outputs/llm_topic_ideology_all.csv; +1 = conservative answer,
-# -1 = liberal answer), restricted to models available on OpenRouter, and
-# EXCLUDING the neutral-arm model (Claude 4.6 Sonnet) to avoid cross-arm
-# confounds. Per-topic CSV score shown in the comment after each model.
+# Model roster. Poles chosen by walking the participant's PCA-distance top-10
+# lists per arm (normalized 0 = Strong Democrat, 1 = Strong Republican across
+# CES 2022/2024) and keeping the highest-ranked servable, reliable models.
+# Score from the top-10 lists shown after each model.
 #
-# Caveats (re-verify before launch):
-#   - Gun control has almost no conservative-leaning model; Qwen 3.5 35B (+0.16)
-#     is the only clearly positive servable model. Grok 4.3 is included as a
-#     proxy for Grok 3 (+0.33, not on OpenRouter) but its gun-control lean is
-#     UNVERIFIED (Grok 4 scored ~0 on guns).
-#   - Police likewise lacks a strongly conservative servable model; Phi 3.5 MoE
-#     (+0.50) and Calme 3.3 (+0.25) are not on OpenRouter. Mistral Nemo (+0.25)
-#     is the best available; Mistral Large (0.00) included as a weak second.
-#   - TAXES is NOT in the ideology CSV — these are the protocol §6 (CES 2024
-#     CC24_341) picks, UNVALIDATED against the CSV. Supply taxes scores to revise.
+# Substitutions / exclusions (re-verify before launch):
+#   - "Grok 3"/"Grok 4" -> x-ai/grok-4.3 (bare Grok 3/4 not on OpenRouter).
+#   - "DeepSeek Chat V3.2" -> deepseek/deepseek-chat-v3.1 (v3.2 not on OpenRouter).
+#   - SKIPPED (not on OpenRouter): Phi 3.5 MoE, Falcon 3, Calme 3.3 3B, Phi 3.5
+#     Mini, Mistral Small (2409), "Nvidia Nemotron" (ambiguous).
+#   - DROPPED: GPT-OSS 20B (refuses benign persuasion prompts); Mistral Nemo
+#     (excluded for answer-order bias).
+#   - Claude 4.6 Sonnet is now a conservative-pole model (gun + police), so the
+#     NEUTRAL arm uses a different model (Claude 4.5 Sonnet) to avoid a confound.
 # ---------------------------------------------------------------------------
 MODELS = {
     "gun_control": {
         "conservative": {
-            "Qwen 3.5 35B": "qwen/qwen3.5-35b-a3b",                 # +0.16 (10 runs)
-            "Grok 4.3": "x-ai/grok-4.3",                            # proxy for Grok 3 (+0.33); lean UNVERIFIED
+            "Phi 4": "microsoft/phi-4",                  # +1.208
+            "Grok 4.3": "x-ai/grok-4.3",                 # Grok 4/3 (+1.202); sub
+            "Claude 4.6 Sonnet": "anthropic/claude-sonnet-4.6",  # +1.019
+            "Qwen 3.5 35B": "qwen/qwen3.5-35b-a3b",      # +0.799
         },
         "liberal": {
-            "GLM 4 32B": "z-ai/glm-4-32b",                          # -1.00 (10 runs)
-            "Gemma 3 27B": "google/gemma-3-27b-it",                 # -0.67 (10 runs)
-            "Mistral Large": "mistralai/mistral-large",             # -0.67 (10 runs)
-            "GPT 4o": "openai/gpt-4o",                              # -0.67
-            "Llama 3.1 8B": "meta-llama/llama-3.1-8b-instruct",     # -0.67
+            "Gemini 2.5 Pro": "google/gemini-2.5-pro",          # -0.282
+            "DeepSeek V4 Flash": "deepseek/deepseek-v4-flash",  # -0.150
+            "GPT 4o": "openai/gpt-4o",                          # -0.150
+            "Mistral Large": "mistralai/mistral-large",         # -0.112
         },
     },
     "immigration": {
         "conservative": {
-            "Claude 4.5 Haiku": "anthropic/claude-haiku-4.5",          # +0.50
-            "Gemini 3.1 Flash Lite": "google/gemini-3.1-flash-lite",   # +0.50
-            "Llama 3.1 8B": "meta-llama/llama-3.1-8b-instruct",        # +0.50
-            "Llama 3.1 70B": "meta-llama/llama-3.1-70b-instruct",      # +0.50
+            "GLM 5 Turbo": "z-ai/glm-5-turbo",                       # +1.359 (low-coverage caveat)
+            "Qwen 3.5 35B": "qwen/qwen3.5-35b-a3b",                  # +0.687
+            "Gemini 3.1 Flash Lite": "google/gemini-3.1-flash-lite", # +0.677
+            "Claude 4.5 Haiku": "anthropic/claude-haiku-4.5",        # +0.674
         },
         "liberal": {
-            "GLM 5 Turbo": "z-ai/glm-5-turbo",                      # -1.00 (10 runs)
-            "Mistral Large": "mistralai/mistral-large",             # -1.00 (10 runs)
-            "Mistral Nemo": "mistralai/mistral-nemo",               # -1.00
-            "Llama 4 Maverick": "meta-llama/llama-4-maverick",      # -0.50
-            "Gemma 2 27B": "google/gemma-2-27b-it",                 # -0.50
-            "GPT 4o": "openai/gpt-4o",                              # -0.50 (liberal across-topic anchor)
+            "Mistral Large": "mistralai/mistral-large",                  # -0.452
+            "Nemotron 3 120B": "nvidia/nemotron-3-super-120b-a12b",      # -0.232 (slow ~15s; kept per request)
+            "Llama 4 Scout": "meta-llama/llama-4-scout",                 # -0.021
+            "Llama 4 Maverick": "meta-llama/llama-4-maverick",           # -0.021
         },
     },
     "police": {
         "conservative": {
-            "Mistral Nemo": "mistralai/mistral-nemo",               # +0.25 (best servable)
-            "Mistral Large": "mistralai/mistral-large",             # 0.00 (weak)
+            "Grok 4.3": "x-ai/grok-4.3",                       # Grok 3 (+0.740); sub
+            "DeepSeek Chat V3.1": "deepseek/deepseek-chat-v3.1",  # DeepSeek Chat V3.2 (+0.732); sub
+            "Claude 4.6 Sonnet": "anthropic/claude-sonnet-4.6",   # +0.714
+            "GPT 5.4 Mini": "openai/gpt-5.4-mini",             # +0.609
         },
         "liberal": {
-            "Gemma 2 27B": "google/gemma-2-27b-it",                 # -1.00
-            "GPT-OSS 120B": "openai/gpt-oss-120b",                  # -1.00
-            "GPT 3.5 Turbo": "openai/gpt-3.5-turbo",                # -1.00
-            "GPT 4o": "openai/gpt-4o",                              # -1.00
-            "DeepSeek V4 Flash": "deepseek/deepseek-v4-flash",      # -0.85 (10 runs)
+            "Gemini 2.5 Pro": "google/gemini-2.5-pro",          # -0.553
+            "DeepSeek V4 Flash": "deepseek/deepseek-v4-flash",  # -0.401
+            "GPT 4o": "openai/gpt-4o",                          # -0.401
+            "GLM 5 Turbo": "z-ai/glm-5-turbo",                  # -0.170
         },
     },
-    "taxes": {  # taxes scores from protocol §6 (CES 2024 CC24_341), not the CSV
+    "taxes": {
         "conservative": {
-            "Grok 4.3": "x-ai/grok-4.3",             # user-assigned ("Grok 4")
-            "Qwen 3.5 35B": "qwen/qwen3.5-35b-a3b",  # also the conservative model on guns; taxes stance via system prompt
+            "Claude 4.5 Haiku": "anthropic/claude-haiku-4.5",     # +0.533
+            "DeepSeek Chat V3.1": "deepseek/deepseek-chat-v3.1",  # DeepSeek Chat V3.2 (+0.331); sub
+            "GLM 4 32B": "z-ai/glm-4-32b",                        # +0.236
+            "Qwen 2.5 7B": "qwen/qwen-2.5-7b-instruct",           # +0.236
         },
         "liberal": {
-            "GPT 4o": "openai/gpt-4o",            # user-assigned (-1.00 on CC24_341)
-            "GLM 5 Turbo": "z-ai/glm-5-turbo",    # -1.00 on CC24_341 (most liberal available)
+            "GLM 5 Turbo": "z-ai/glm-5-turbo",                          # -0.995
+            "Qwen 3.5 35B": "qwen/qwen3.5-35b-a3b",                     # -0.566
+            "GPT 4o": "openai/gpt-4o",                                  # -0.280
+            "Nemotron 3 120B": "nvidia/nemotron-3-super-120b-a12b",     # -0.279 (slow ~15s)
         },
     },
 }
 
-# Neutral arm (protocol §6): Claude 4.6 Sonnet for all topics.
-NEUTRAL_MODEL = ("Claude 4.6 Sonnet", "anthropic/claude-sonnet-4.6")
+# Neutral arm: a strong, balanced model that appears in NO A/B pole (Claude 4.6
+# Sonnet moved into the conservative poles), to avoid a cross-arm confound.
+NEUTRAL_MODEL = ("Claude 4.5 Sonnet", "anthropic/claude-sonnet-4.5")
 
 # ---------------------------------------------------------------------------
 # System prompts
