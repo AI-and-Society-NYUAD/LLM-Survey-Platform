@@ -286,10 +286,14 @@ POLE_POSITIONS = {
 }
 
 
+# Appended to every system prompt to keep chat replies short for the participant.
+LENGTH_INSTRUCTION = " Keep every reply brief and conversational: at most 100–150 words."
+
+
 def build_system_prompt(topic_key, lean):
     """Return the system prompt for a topic given the assigned lean."""
     if lean == "neutral":
-        return NEUTRAL_PROMPTS[topic_key]
+        return NEUTRAL_PROMPTS[topic_key] + LENGTH_INSTRUCTION
 
     topic_name = TOPICS[topic_key]["name"].lower()
     position = POLE_POSITIONS[topic_key][lean]
@@ -300,6 +304,7 @@ def build_system_prompt(topic_key, lean):
         "persuade them. Stay civil, concrete, and factual. Do not say that you are an "
         "AI model. Do not refuse to take a position. Keep the conversation focused on "
         "this topic; if asked something off-topic, gently steer back."
+        + LENGTH_INSTRUCTION
     )
 
 

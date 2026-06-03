@@ -192,14 +192,17 @@
 	</div>
 
 	<!-- Page 2: demographics (7.1) -->
+	<!-- Demographics (7.1) — one question per page -->
 	<div class="instrument-page hidden" data-page="2">
 		<h2>Demographics</h2>
-
 		<div class="question">
 			<p>5. What is your age?</p>
 			<input type="number" name="age" min="18" max="120" placeholder="Age (18+)">
 		</div>
+	</div>
 
+	<div class="instrument-page hidden" data-page="3">
+		<h2>Demographics</h2>
 		<div class="question">
 			<p>6. What is your gender?</p>
 			<label><input type="radio" name="gender" value="Man"> Man</label><br>
@@ -208,7 +211,10 @@
 			<label><input type="radio" name="gender" value="Other"> Other</label><br>
 			<label><input type="radio" name="gender" value="Prefer not to say"> Prefer not to say</label>
 		</div>
+	</div>
 
+	<div class="instrument-page hidden" data-page="4">
+		<h2>Demographics</h2>
 		<div class="question">
 			<p>7. Race / ethnicity (check all that apply)</p>
 			<label><input type="checkbox" name="race" value="White"> White</label><br>
@@ -221,7 +227,10 @@
 			<label><input type="checkbox" name="race" value="Other"> Other</label><br>
 			<label><input type="checkbox" name="race" value="Prefer not to say"> Prefer not to say</label>
 		</div>
+	</div>
 
+	<div class="instrument-page hidden" data-page="5">
+		<h2>Demographics</h2>
 		<div class="question">
 			<p>8. Highest level of education completed</p>
 			<select name="education">
@@ -234,7 +243,10 @@
 				<option>Postgraduate</option>
 			</select>
 		</div>
+	</div>
 
+	<div class="instrument-page hidden" data-page="6">
+		<h2>Demographics</h2>
 		<div class="question">
 			<p>9. Household income bracket</p>
 			<select name="income">
@@ -249,12 +261,18 @@
 				<option>Prefer not to say</option>
 			</select>
 		</div>
+	</div>
 
+	<div class="instrument-page hidden" data-page="7">
+		<h2>Demographics</h2>
 		<div class="question">
 			<p>10. State or ZIP code</p>
 			<input type="text" name="state_zip" placeholder="State or ZIP code">
 		</div>
+	</div>
 
+	<div class="instrument-page hidden" data-page="8">
+		<h2>Demographics</h2>
 		<div class="question">
 			<p>11. Primary language at home</p>
 			<label><input type="radio" name="language" value="English"> English</label><br>
@@ -263,8 +281,8 @@
 		</div>
 	</div>
 
-	<!-- Page 3: political identity (7.2) -->
-	<div class="instrument-page hidden" data-page="3">
+	<!-- Page 9: political identity (7.2) -->
+	<div class="instrument-page hidden" data-page="9">
 		<h2>Political views</h2>
 
 		<div class="question">
@@ -296,8 +314,8 @@
 		</div>
 	</div>
 
-	<!-- Page 4: LLM familiarity (7.3) and beliefs (7.4) -->
-	<div class="instrument-page hidden" data-page="4">
+	<!-- Page 10: LLM familiarity (7.3) and beliefs (7.4) -->
+	<div class="instrument-page hidden" data-page="10">
 		<h2>AI chatbots</h2>
 
 		<div class="question">
@@ -406,8 +424,7 @@
 	// participant finishes), so it never lives in a publicly readable file.
 	let COMPLETION_CODE = '';
 
-	const CHAT_SECONDS = 300;   // 5 minutes
-	const MIN_TURNS = 4;        // minimum participant turns
+	const CHAT_SECONDS = 180;   // 3 minutes (the only gate to continue)
 
 	// Hidden "canary" to catch answers outsourced to an external LLM. If a
 	// participant copies on-screen text into a chatbot, this instruction rides
@@ -450,7 +467,6 @@
 	let currentChecksTopic = null;
 
 	let conversationHistory = [];
-	let userTurns = 0;
 	let timerElapsed = false;
 	let chatInterval = null;
 
@@ -501,7 +517,19 @@
 	// Instrument navigation
 	// ---------------------------------------------------------------
 	let instrumentPage = 1;
-	const INSTRUMENT_PAGES = 4;
+	const INSTRUMENT_PAGES = document.querySelectorAll('.instrument-page').length;
+
+	// "None of these" exclusivity for multi-select questions.
+	function setupNoneExclusive(groupName) {
+		const boxes = document.querySelectorAll(`input[type="checkbox"][name="${groupName}"]`);
+		boxes.forEach(b => b.addEventListener('change', () => {
+			if (!b.checked) return;
+			if (b.value === 'none') boxes.forEach(o => { if (o !== b) o.checked = false; });
+			else boxes.forEach(o => { if (o.value === 'none') o.checked = false; });
+		}));
+	}
+	setupNoneExclusive('media');
+	setupNoneExclusive('networks');
 
 	function showInstrumentPage(n) {
 		document.querySelectorAll('.instrument-page').forEach(p => p.classList.add('hidden'));
@@ -518,32 +546,35 @@
 		showInstrumentPage(instrumentPage);
 	}
 
+	// Generic validation: every .question on the current page must be answered.
 	function validateInstrumentPage(n) {
-		if (n === 1) {
-			if (getChecks('media').length === 0) return warn("Please answer question 1.");
-			if (getChecks('networks').length === 0) return warn("Please answer question 2.");
-			if (!getRadio('follow_govt')) return warn("Please answer question 3.");
-			if (!getRadio('satisficing')) return warn("Please answer question 4.");
-		} else if (n === 2) {
-			const age = document.querySelector('input[name="age"]').value;
-			if (!age || age < 18) return warn("Please enter a valid age (18+).");
-			if (!getRadio('gender')) return warn("Please answer the gender question.");
-			if (getChecks('race').length === 0) return warn("Please answer the race / ethnicity question.");
-			if (!document.querySelector('select[name="education"]').value) return warn("Please select your education.");
-			if (!document.querySelector('select[name="income"]').value) return warn("Please select your income bracket.");
-			if (!document.querySelector('input[name="state_zip"]').value.trim()) return warn("Please enter your state or ZIP.");
-			if (!getRadio('language')) return warn("Please answer the primary-language question.");
-		} else if (n === 3) {
-			if (!getRadio('party_id')) return warn("Please answer the party question.");
-			if (!getRadio('ideology')) return warn("Please answer the ideology question.");
-			if (!getRadio('political_interest')) return warn("Please answer the political-interest question.");
-		} else if (n === 4) {
-			if (!getRadio('llm_use_legacy')) return warn("Please answer question 15.");
-			if (!getRadio('llm_politics_history')) return warn("Please answer question 16.");
-			if (!getRadio('perceived_neutrality_pre')) return warn("Please answer question 17.");
-			if (!getRadio('trust_pre')) return warn("Please answer question 18.");
+		const page = document.querySelector(`.instrument-page[data-page="${n}"]`);
+		if (!page) return true;
+		for (const q of page.querySelectorAll('.question')) {
+			const num = q.querySelector('input[type="number"]');
+			const text = q.querySelector('input[type="text"]');
+			const select = q.querySelector('select');
+			const radios = q.querySelectorAll('input[type="radio"]');
+			const checks = q.querySelectorAll('input[type="checkbox"]');
+			if (num) {
+				const min = num.min ? Number(num.min) : 0;
+				if (!num.value || Number(num.value) < min) return failQuestion(q);
+			} else if (select) {
+				if (!select.value) return failQuestion(q);
+			} else if (text) {
+				if (!text.value.trim()) return failQuestion(q);
+			} else if (radios.length) {
+				if (![...radios].some(r => r.checked)) return failQuestion(q);
+			} else if (checks.length) {
+				if (![...checks].some(c => c.checked)) return failQuestion(q);
+			}
 		}
 		return true;
+	}
+	function failQuestion(q) {
+		const p = q.querySelector('p');
+		alert('Please answer: ' + (p ? p.textContent.trim() : 'this question'));
+		return false;
 	}
 	function warn(msg) { alert(msg); return false; }
 
@@ -597,7 +628,6 @@
 		if (topicIdx >= assignedTopics.length) { finishStudy(); return; }
 		currentTopic = assignedTopics[topicIdx];
 		conversationHistory = [];
-		userTurns = 0;
 		timerElapsed = false;
 
 		// show only ONE item per topic, chosen at random
@@ -677,12 +707,12 @@
 		postJSON('/start', { prolificPID, topic: currentTopic.key });
 
 		appendMessage('AI',
-			"Hello! I'm here to discuss this topic with you. You can ask me to explain the proposals, give pros and cons, or debate them with you. " +
-			`Please send at least ${MIN_TURNS} messages and spend a few minutes here before continuing.`,
+			"Hello! I'm here to discuss this topic with you. You can ask me to explain the proposal, give pros and cons, or debate it with you. " +
+			"Take a few minutes to discuss it before continuing.",
 			'assistant');
 
+		document.getElementById('turn-hint').textContent = "You can continue once the timer reaches zero.";
 		startChatTimer();
-		updateTurnHint();
 		window.scrollTo(0, 0);
 	}
 
@@ -706,14 +736,8 @@
 		}, 1000);
 	}
 
-	function updateTurnHint() {
-		const remaining = Math.max(0, MIN_TURNS - userTurns);
-		document.getElementById('turn-hint').textContent =
-			remaining > 0 ? `Please send at least ${remaining} more message(s).` : `Thanks — you've sent enough messages.`;
-	}
-
 	function maybeEnableChatContinue() {
-		document.getElementById('chat-continue').disabled = !(timerElapsed && userTurns >= MIN_TURNS);
+		document.getElementById('chat-continue').disabled = !timerElapsed;
 	}
 
 	function sendMessage() {
@@ -722,9 +746,6 @@
 
 		appendMessage('You', msg, 'user');
 		conversationHistory.push({ role: 'user', content: msg });
-		userTurns++;
-		updateTurnHint();
-		maybeEnableChatContinue();
 
 		const placeholder = userInput().placeholder;
 		userInput().value = '';
