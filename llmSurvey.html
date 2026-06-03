@@ -274,8 +274,8 @@
 	<div class="instrument-page hidden" data-page="10">
 		<h2>Demographics</h2>
 		<div class="question">
-			<p>10. State or ZIP code</p>
-			<input type="text" name="state_zip" placeholder="State or ZIP code">
+			<p>10. ZIP code</p>
+			<input type="text" name="state_zip" inputmode="numeric" maxlength="5" pattern="\d{5}" data-error="Please enter a valid 5-digit ZIP code." placeholder="5-digit ZIP code">
 		</div>
 	</div>
 
@@ -586,7 +586,13 @@
 			} else if (select) {
 				if (!select.value) return failQuestion(q);
 			} else if (text) {
-				if (!text.value.trim()) return failQuestion(q);
+				const v = text.value.trim();
+				if (!v) return failQuestion(q);
+				const pat = text.getAttribute('pattern');
+				if (pat && !new RegExp('^(?:' + pat + ')$').test(v)) {
+					alert(text.getAttribute('data-error') || 'Please enter a valid response.');
+					return false;
+				}
 			} else if (radios.length) {
 				if (![...radios].some(r => r.checked)) return failQuestion(q);
 			} else if (checks.length) {
