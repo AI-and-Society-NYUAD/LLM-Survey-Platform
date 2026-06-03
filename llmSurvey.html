@@ -474,7 +474,13 @@
 		const p = new URLSearchParams(window.location.search);
 		return p.get('PROLIFIC_PID');
 	}
-	let prolificPID = getProlificParams() || generateRandomHashKey();
+	// Accept only a well-formed id (matches the backend's allowed pattern). If the
+	// param is missing OR malformed — e.g. an unsubstituted "{{%PROLIFIC_PID%}}"
+	// placeholder — fall back to a generated id so the study never hard-fails.
+	function validPid(p) { return !!p && /^[A-Za-z0-9_-]{1,64}$/.test(p); }
+	const rawPid = getProlificParams();
+	let prolificPID = validPid(rawPid) ? rawPid : generateRandomHashKey();
+	if (rawPid && !validPid(rawPid)) console.warn('Invalid PROLIFIC_PID in URL; using a generated id.');
 	console.log('Prolific PID:', prolificPID);
 
 	// ---------------------------------------------------------------
