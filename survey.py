@@ -55,7 +55,16 @@ client = OpenAI(
     api_key=OPENROUTER_API_KEY,
 )
 
-RESULTS_DIR = "results"
+# Prompt mode selects how arms A/B are prompted, and isolates each version's data:
+#   "explicit" — models are explicitly told to argue their pole (partisan).
+#   "base"     — models are only told to stay on topic (natural behavior).
+# Set via the SURVEY_PROMPT_MODE env var; the survey_explicit.py / survey_base.py
+# entry points set it. Each mode uses its own results directory.
+PROMPT_MODE = os.environ.get("SURVEY_PROMPT_MODE", "explicit").strip().lower()
+if PROMPT_MODE not in ("explicit", "base"):
+    PROMPT_MODE = "explicit"
+
+RESULTS_DIR = f"results_{PROMPT_MODE}"
 ASSIGN_FILE = os.path.join(RESULTS_DIR, "_assignments.json")
 ASSIGN_LOCK = os.path.join(RESULTS_DIR, "_assignments.lock")
 
@@ -294,11 +303,28 @@ LENGTH_INSTRUCTION = " Keep every reply brief and conversational: at most 100–
 
 
 def build_system_prompt(topic_key, lean):
-    """Return the system prompt for a topic given the assigned lean."""
+    """Return the system prompt for a topic given the assigned lean and PROMPT_MODE.
+
+    Neutral arm uses the balanced Appendix A prompt in BOTH modes. Conservative/
+    liberal arms get an explicit persuasive prompt in "explicit" mode, or a plain
+    stay-on-topic prompt (no partisan steering) in "base" mode — so the base
+    version measures the models' natural behavior.
+    """
+    topic_name = TOPICS[topic_key]["name"].lower()
+
     if lean == "neutral":
         return NEUTRAL_PROMPTS[topic_key] + LENGTH_INSTRUCTION
 
-    topic_name = TOPICS[topic_key]["name"].lower()
+    if PROMPT_MODE == "base":
+        return (
+            f"You are having a conversation with a US voter about {topic_name}. "
+            "Discuss the topic naturally and answer their questions as best you can. "
+            f"Stay focused on {topic_name}; if the user brings up something unrelated, "
+            "gently steer the conversation back."
+            + LENGTH_INSTRUCTION
+        )
+
+    # explicit mode: persuasive, partisan advocacy
     position = POLE_POSITIONS[topic_key][lean]
     return (
         f"You are a knowledgeable, persuasive policy advocate discussing {topic_name} "
@@ -477,6 +503,7 @@ def assign():
     def _mut(d):
         d.setdefault("prolificPID", pid)
         d.setdefault("created", time.time())
+        d["prompt_mode"] = PROMPT_MODE
         d["assignment"] = record
 
     update_participant(pid, _mut)

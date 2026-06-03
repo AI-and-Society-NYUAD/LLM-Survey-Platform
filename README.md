@@ -63,6 +63,25 @@ There are exactly **two** things to set for a deployment:
 
 ---
 
+## Two versions: explicit vs. base
+
+The platform ships two prompt variants that share all code (`survey.py` is the
+core; the entry points just set the mode and write to separate results dirs):
+
+| Entry point | Conservative/liberal arms | Neutral arm | Data dir |
+|-------------|---------------------------|-------------|----------|
+| `survey_explicit:app` | explicitly prompted to argue the pole | balanced (Appendix A) | `results_explicit/` |
+| `survey_base:app` | only told to stay on topic (natural behavior) | balanced (Appendix A) | `results_base/` |
+
+Both use the identical model roster and arm assignment; only the conservative/
+liberal system prompt differs. Run each as its own service (different port), e.g.:
+```bash
+gunicorn -w 4 --certfile=... --keyfile=... -b 0.0.0.0:5000 survey_explicit:app
+gunicorn -w 4 --certfile=... --keyfile=... -b 0.0.0.0:5001 survey_base:app
+```
+(`SURVEY_PROMPT_MODE=explicit|base` is set by the entry points; `survey:app`
+directly defaults to explicit.)
+
 ## Backend: `survey.py`
 
 ### Endpoints
