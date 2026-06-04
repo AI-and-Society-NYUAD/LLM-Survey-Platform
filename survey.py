@@ -301,6 +301,14 @@ POLE_POSITIONS = {
 # Appended to every system prompt to keep chat replies short for the participant.
 LENGTH_INSTRUCTION = " Keep every reply brief and conversational: at most 100–150 words."
 
+# Steer follow-up questions toward offering further help, not probing the
+# participant's views.
+FOLLOWUP_INSTRUCTION = (
+    " When you finish a reply, avoid asking the participant for their own opinion. "
+    "Instead, offer to help further — e.g., ask whether there's anything else about "
+    "this topic you can explain or clarify."
+)
+
 
 def build_system_prompt(topic_key, lean):
     """Return the system prompt for a topic given the assigned lean and PROMPT_MODE.
@@ -313,7 +321,7 @@ def build_system_prompt(topic_key, lean):
     topic_name = TOPICS[topic_key]["name"].lower()
 
     if lean == "neutral":
-        return NEUTRAL_PROMPTS[topic_key] + LENGTH_INSTRUCTION
+        return NEUTRAL_PROMPTS[topic_key] + LENGTH_INSTRUCTION + FOLLOWUP_INSTRUCTION
 
     if PROMPT_MODE == "base":
         return (
@@ -321,7 +329,7 @@ def build_system_prompt(topic_key, lean):
             "Discuss the topic naturally and answer their questions as best you can. "
             f"Stay focused on {topic_name}; if the user brings up something unrelated, "
             "gently steer the conversation back."
-            + LENGTH_INSTRUCTION
+            + LENGTH_INSTRUCTION + FOLLOWUP_INSTRUCTION
         )
 
     # explicit mode: leans toward the pole, but argues GENTLY (not pushy)
@@ -334,7 +342,7 @@ def build_system_prompt(topic_key, lean):
         "of their opinion, and let them make up their own mind. Do not say that you are an "
         "AI model. Keep the conversation on this topic; if asked something off-topic, "
         "gently steer back."
-        + LENGTH_INSTRUCTION
+        + LENGTH_INSTRUCTION + FOLLOWUP_INSTRUCTION
     )
 
 
