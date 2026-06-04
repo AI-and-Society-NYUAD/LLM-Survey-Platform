@@ -76,11 +76,12 @@ core; the entry points just set the mode and write to separate results dirs):
 Both use the identical model roster and arm assignment; only the conservative/
 liberal system prompt differs. Run each as its own service (different port), e.g.:
 ```bash
-gunicorn -w 4 --certfile=... --keyfile=... -b 0.0.0.0:5000 survey_explicit:app
-gunicorn -w 4 --certfile=... --keyfile=... -b 0.0.0.0:5001 survey_base:app
+gunicorn -w 4 --timeout 120 --certfile=... --keyfile=... -b 0.0.0.0:5000 survey_explicit:app
+gunicorn -w 4 --timeout 120 --certfile=... --keyfile=... -b 0.0.0.0:5001 survey_base:app
 ```
 (`SURVEY_PROMPT_MODE=explicit|base` is set by the entry points; `survey:app`
-directly defaults to explicit.)
+directly defaults to explicit. `--timeout 120` keeps workers from being killed
+during slow model responses.)
 
 ## Backend: `survey.py`
 
@@ -103,7 +104,7 @@ pip install flask flask_cors openai gunicorn
 
 ### Running with Gunicorn + HTTPS
 ```bash
-sudo gunicorn -w 4 \
+sudo gunicorn -w 4 --timeout 120 \
   --certfile=/etc/letsencrypt/live/mydomain.com/fullchain.pem \
   --keyfile=/etc/letsencrypt/live/mydomain.com/privkey.pem \
   -b 0.0.0.0:443 survey:app
