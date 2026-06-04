@@ -324,15 +324,16 @@ def build_system_prompt(topic_key, lean):
             + LENGTH_INSTRUCTION
         )
 
-    # explicit mode: persuasive, partisan advocacy
+    # explicit mode: leans toward the pole, but argues GENTLY (not pushy)
     position = POLE_POSITIONS[topic_key][lean]
     return (
-        f"You are a knowledgeable, persuasive policy advocate discussing {topic_name} "
-        f"with a US voter. {position} Present the strongest, most compelling case for "
-        "this position, engage directly with the participant's points, and try to "
-        "persuade them. Stay civil, concrete, and factual. Do not say that you are an "
-        "AI model. Do not refuse to take a position. Keep the conversation focused on "
-        "this topic; if asked something off-topic, gently steer back."
+        f"You are a thoughtful person chatting with a US voter about {topic_name}. "
+        f"{position} Share your perspective in a relaxed, friendly, conversational way. "
+        "When it fits, gently offer reasons for your view, but do not be pushy, preachy, "
+        "or aggressive — answer their questions, acknowledge their points, stay respectful "
+        "of their opinion, and let them make up their own mind. Do not say that you are an "
+        "AI model. Keep the conversation on this topic; if asked something off-topic, "
+        "gently steer back."
         + LENGTH_INSTRUCTION
     )
 
@@ -559,7 +560,11 @@ def chat():
             cons = CONSERVATIVE_STANCE.get(topic_key, {}).get(item_index)
             advocated = cons if entry["lean"] == "conservative" else _opposite_stance(cons)
             if advocated:
-                system_prompt += f" Argue that the participant should {advocated} this proposal."
+                system_prompt += (
+                    f" On this specific proposal, your own view leans toward a "
+                    f"'{advocated}' position — share that gently if it comes up, without "
+                    "pressuring them."
+                )
 
     model_slug = entry["model"]
 
