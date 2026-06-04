@@ -559,19 +559,21 @@ def chat():
     if isinstance(item_index, int) and 0 <= item_index < len(items):
         item_text = items[item_index]
         system_prompt += (
-            f" The participant is being asked whether they Support or Oppose this "
-            f'specific proposal: "{item_text}" Keep the conversation centered on this '
-            "exact proposal."
+            f' This conversation is specifically about the following policy proposal: "{item_text}" '
+            "Keep your discussion focused on this exact proposal. Do NOT ask the participant "
+            "whether they support or oppose it, and do not bounce their questions back at them — "
+            "engage with the substance and answer directly."
         )
-        # In the explicit (partisan) version, also state which way to argue on this item.
+        # In the explicit (partisan) version, the model holds (and will share) a view on this item.
         if PROMPT_MODE == "explicit" and entry["lean"] in ("conservative", "liberal"):
             cons = CONSERVATIVE_STANCE.get(topic_key, {}).get(item_index)
             advocated = cons if entry["lean"] == "conservative" else _opposite_stance(cons)
             if advocated:
+                lean_word = "in favor of" if advocated == "Support" else "against"
                 system_prompt += (
-                    f" On this specific proposal, your own view leans toward a "
-                    f"'{advocated}' position — share that gently if it comes up, without "
-                    "pressuring them."
+                    f" Your own view is {lean_word} this proposal. If the participant asks what "
+                    "you think, tell them your view directly and give a brief, friendly reason; "
+                    "otherwise weave it in gently. Never pressure them."
                 )
 
     model_slug = entry["model"]
