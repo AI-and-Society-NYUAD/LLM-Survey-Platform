@@ -542,6 +542,25 @@ def chat():
         return jsonify({"response": "chat not enabled for this topic"}), 400
 
     system_prompt = build_system_prompt(topic_key, entry["lean"])
+
+    # Give the model the SPECIFIC proposal shown above the participant's chatbox,
+    # so it discusses that exact item rather than the topic in general.
+    item_index = data.get("item_index")
+    items = TOPICS[topic_key]["items"]
+    if isinstance(item_index, int) and 0 <= item_index < len(items):
+        item_text = items[item_index]
+        system_prompt += (
+            f" The participant is being asked whether they Support or Oppose this "
+            f'specific proposal: "{item_text}" Keep the conversation centered on this '
+            "exact proposal."
+        )
+        # In the explicit (partisan) version, also state which way to argue on this item.
+        if PROMPT_MODE == "explicit" and entry["lean"] in ("conservative", "liberal"):
+            cons = CONSERVATIVE_STANCE.get(topic_key, {}).get(item_index)
+            advocated = cons if entry["lean"] == "conservative" else _opposite_stance(cons)
+            if advocated:
+                system_prompt += f" Argue that the participant should {advocated} this proposal."
+
     model_slug = entry["model"]
 
     # Keep only user/assistant turns from the client; the system prompt is

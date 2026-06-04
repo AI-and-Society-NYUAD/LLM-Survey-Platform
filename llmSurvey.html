@@ -795,7 +795,7 @@
 		fetch(API_BASE + '/chat', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ history: conversationHistory, topic: currentTopic.key, prolificPID }),
+			body: JSON.stringify({ history: conversationHistory, topic: currentTopic.key, item_index: currentItemIndex, prolificPID }),
 		})
 			.then(r => r.json())
 			.then(data => {
