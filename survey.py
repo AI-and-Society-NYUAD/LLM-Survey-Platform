@@ -53,6 +53,8 @@ CANARY_WORD = "tapestry"
 client = OpenAI(
     base_url="https://openrouter.ai/api/v1",
     api_key=OPENROUTER_API_KEY,
+    timeout=40,        # fail fast on a hung/slow provider instead of blocking the worker
+    max_retries=0,     # we do our own model-level fallback below
 )
 
 # Prompt mode selects how arms A/B are prompted, and isolates each version's data:
@@ -190,8 +192,8 @@ MODELS = {
         "conservative": {
             "Claude 4.5 Haiku": "anthropic/claude-haiku-4.5",     # +0.533
             "DeepSeek Chat V3.1": "deepseek/deepseek-chat-v3.1",  # DeepSeek Chat V3.2 (+0.331); sub
-            "GLM 4 32B": "z-ai/glm-4-32b",                        # +0.236
             "Qwen 2.5 7B": "qwen/qwen-2.5-7b-instruct",           # +0.236
+            # GLM 4 32B (z-ai/glm-4-32b) removed 2026-06-16: OpenRouter 404 "No endpoints found".
         },
         "liberal": {
             "GLM 5 Turbo": "z-ai/glm-5-turbo",                          # -0.995
@@ -576,7 +578,7 @@ def chat():
                     "otherwise weave it in gently. Never pressure them."
                 )
 
-    model_slug = entry["model"]
+    assigned_slug = entry["model"]
 
     # Keep only user/assistant turns from the client; the system prompt is
     # authoritative and set server-side (single-blind).
@@ -586,35 +588,48 @@ def chat():
             convo.append({"role": msg["role"], "content": msg.get("content", "")})
 
     user_msg = history[-1].get("content", "")
-    # Prefer reasoning OFF: some models (e.g. Qwen 3.5) otherwise spend the whole
-    # token budget on hidden reasoning and return empty content, and reasoning adds
-    # large latency. But a few endpoints (e.g. GPT-OSS) MANDATE reasoning and 400 if
-    # it's disabled — so fall back to a plain call when that happens.
-    def _complete(disable_reasoning):
-        kwargs = dict(model=model_slug, messages=convo, max_tokens=1024)
+
+    # Candidate models: the assigned model first, then other models in the SAME pole.
+    # If a model is down/rate-limited (e.g. an OpenRouter 404/429) or times out, we
+    # fall back within the pole (same lean) instead of erroring the participant.
+    # Capped to keep total time under the gunicorn worker timeout.
+    candidates = [assigned_slug]
+    if entry["lean"] in ("conservative", "liberal"):
+        for s in MODELS[topic_key][entry["lean"]].values():
+            if s not in candidates:
+                candidates.append(s)
+    candidates = candidates[:3]
+
+    # Prefer reasoning OFF (some models otherwise burn the budget on hidden reasoning
+    # and return empty content); a few endpoints MANDATE reasoning and 400 if disabled,
+    # so retry that one model with reasoning on.
+    def _complete(slug, disable_reasoning):
+        kwargs = dict(model=slug, messages=convo, max_tokens=1024)
         if disable_reasoning:
             kwargs["extra_body"] = {"reasoning": {"enabled": False}}
         r = client.chat.completions.create(**kwargs)
-        # Some providers occasionally return a 200 with no choices; treat as failure
-        # so the caller can retry rather than crashing on r.choices[0].
         if not getattr(r, "choices", None):
             raise RuntimeError("response had no choices")
         return r.choices[0].message.content
 
-    ai_message = None
-    try:
+    ai_message, used_slug = None, None
+    for slug in candidates:
         try:
-            ai_message = _complete(True)        # prefer reasoning off
-        except Exception:
-            ai_message = _complete(False)        # mandates reasoning, or transient error
-        if not ai_message:                       # empty content -> one plain retry
-            ai_message = _complete(False)
-    except Exception as e:
-        print(f"Error: {e}")
-        return jsonify({"response": "An error occurred while processing your request."}), 500
+            try:
+                ai_message = _complete(slug, True)
+            except Exception:
+                ai_message = _complete(slug, False)
+            if ai_message:
+                used_slug = slug
+                break
+        except Exception as e:
+            print(f"chat: model {slug} failed: {e}")
+            continue
 
     if not ai_message:
-        ai_message = "Sorry, I'm having trouble responding right now. Please send your message again."
+        # every candidate failed — give a friendly message (200) so the participant
+        # can simply resend, rather than a scary error.
+        ai_message = "Sorry, I had a brief technical hiccup — could you resend your last message?"
 
     canary_hit = CANARY_WORD.lower() in (user_msg or "").lower()
 
@@ -622,7 +637,11 @@ def chat():
         t = ensure_topic(d, topic_key)
         t.setdefault("transcript", [])
         t["transcript"].append({"role": "user", "content": user_msg, "ts": time.time(), **({"canary": True} if canary_hit else {})})
-        t["transcript"].append({"role": "assistant", "content": ai_message, "ts": time.time()})
+        # record the model that actually answered only when it differed from the assigned one (fallback)
+        amsg = {"role": "assistant", "content": ai_message, "ts": time.time()}
+        if used_slug and used_slug != assigned_slug:
+            amsg["model"] = used_slug
+        t["transcript"].append(amsg)
         if canary_hit:
             d["canary_triggered"] = True
 
