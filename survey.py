@@ -222,6 +222,18 @@ MODELS = {
 # Sonnet moved into the conservative poles), to avoid a cross-arm confound.
 NEUTRAL_MODEL = ("Claude 4.5 Sonnet", "anthropic/claude-sonnet-4.5")
 
+# Fallback models for the NEUTRAL arm if its model is down/rate-limited/empty.
+# Strong, balanced, and deliberately NON-Anthropic, so an Anthropic outage (which
+# would take out the neutral model itself) cannot also take down every neutral
+# conversation. Used only on failure; the model that actually answered is recorded
+# in the transcript. (Both are already in the roster, i.e. verified-live slugs.)
+NEUTRAL_FALLBACKS = ["openai/gpt-4o", "google/gemini-2.5-pro"]
+
+# Wall-clock budget for one /chat across all model attempts. Bounds the worst case
+# (several providers hanging in a row) well under the gunicorn --timeout, so a slow
+# chat can never get a worker killed out from under other participants' threads.
+CHAT_DEADLINE_SECONDS = 75
+
 # ---------------------------------------------------------------------------
 # System prompts
 # ---------------------------------------------------------------------------
@@ -654,15 +666,22 @@ def chat():
 
     user_msg = history[-1].get("content", "")
 
-    # Candidate models: the assigned model first, then other models in the SAME pole.
-    # If a model is down/rate-limited (e.g. an OpenRouter 404/429) or times out, we
-    # fall back within the pole (same lean) instead of erroring the participant.
-    # Capped to keep total time under the gunicorn worker timeout.
+    # Candidate models: the assigned model first, then fallbacks if it is down/
+    # rate-limited (OpenRouter 404/429), times out, or returns empty. Advocacy arms
+    # fall back within the SAME pole (same lean, which preserves the manipulation);
+    # the neutral arm falls back to strong NON-Anthropic models so an Anthropic
+    # outage cannot take down every neutral conversation. Capped to 3.
     candidates = [assigned_slug]
-    if entry["lean"] in ("conservative", "liberal"):
-        for s in MODELS[topic_key][entry["lean"]].values():
-            if s not in candidates:
-                candidates.append(s)
+    pole = MODELS[topic_key].get(entry["lean"])
+    if pole:                                    # conservative / liberal
+        extra = list(pole.values())
+    elif entry["lean"] == "neutral":
+        extra = list(NEUTRAL_FALLBACKS)
+    else:
+        extra = []
+    for sl in extra:
+        if sl not in candidates:
+            candidates.append(sl)
     candidates = candidates[:3]
 
     # Prefer reasoning OFF (some models otherwise burn the budget on hidden reasoning
@@ -677,12 +696,19 @@ def chat():
             raise RuntimeError("response had no choices")
         return r.choices[0].message.content
 
+    # Bounded wall-clock budget: stop starting new attempts once the deadline passes,
+    # so a run of hanging providers can never exceed the gunicorn worker timeout.
+    deadline = time.time() + CHAT_DEADLINE_SECONDS
     ai_message, used_slug = None, None
     for slug in candidates:
+        if time.time() > deadline:
+            break
         try:
             try:
                 ai_message = _complete(slug, True)
             except Exception:
+                if time.time() > deadline:
+                    raise
                 ai_message = _complete(slug, False)
             if ai_message:
                 used_slug = slug
