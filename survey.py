@@ -421,6 +421,50 @@ def _empty_assign_state():
     return {"counts": counts, "model_counts": model_counts, "participants": {}}
 
 
+def _reconcile_state(state):
+    """Make a loaded assignment state structurally consistent with the CURRENT
+    TOPICS / CONDITION_WEIGHTS / MODELS, in place, so editing the roster (adding or
+    removing a model, condition, or topic) can't 500 /assign on a stale
+    _assignments.json. Existing counts (balancing history) and the participants map
+    are preserved; missing keys are added at 0 and keys no longer in the code are
+    dropped. (A freshly built _empty_assign_state() is already consistent -> no-op.)
+    """
+    state.setdefault("counts", {})
+    state.setdefault("model_counts", {})
+    state.setdefault("participants", {})
+
+    counts = state["counts"]
+    for tk in list(counts):
+        if tk not in TOPICS:
+            del counts[tk]                       # topic removed from the study
+    for tk in TOPICS:
+        tc = counts.setdefault(tk, {})
+        for c in CONDITION_WEIGHTS:
+            tc.setdefault(c, 0)                  # newly added condition
+        for c in list(tc):
+            if c not in CONDITION_WEIGHTS:
+                del tc[c]                        # retired condition
+
+    mc = state["model_counts"]
+    for tk in list(mc):
+        if tk not in TOPICS:
+            del mc[tk]
+    for tk in TOPICS:
+        tmc = mc.setdefault(tk, {})
+        for pole in ("conservative", "liberal"):
+            pm = tmc.setdefault(pole, {})
+            for name in MODELS[tk][pole]:
+                pm.setdefault(name, 0)           # newly added model
+            for name in list(pm):
+                if name not in MODELS[tk][pole]:
+                    del pm[name]                 # model removed from the roster
+        for pole in list(tmc):
+            if pole not in ("conservative", "liberal"):
+                del tmc[pole]                    # stale pole (defensive)
+
+    return state
+
+
 def _pick_condition(topic_counts):
     """Weighted least-filled: pick the condition with the lowest count/weight ratio."""
     best, best_ratio = [], None
@@ -453,6 +497,11 @@ def assign_participant(pid):
                         state = json.load(f)
                     except json.JSONDecodeError:
                         state = _empty_assign_state()
+
+            # Self-heal a stale assignment file after a roster/condition edit, so a
+            # leftover model or condition can't 500 /assign (counts + model_counts
+            # are reconciled to the current TOPICS/CONDITION_WEIGHTS/MODELS in place).
+            _reconcile_state(state)
 
             if pid in state["participants"]:
                 return state["participants"][pid]
