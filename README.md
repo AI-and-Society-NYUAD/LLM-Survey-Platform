@@ -3,8 +3,8 @@
 A between-conditions survey platform for measuring how short LLM conversations
 shift participants' political attitudes. Each participant goes through four
 topics (Gun control, Immigration, Police, Taxes). Each topic is independently
-assigned one of **six balanced cells** by a server-side randomizer — the
-conservative and liberal advocacy arms are each crossed with a **strength**
+assigned one of **six cells** by a server-side balanced randomizer (base advocacy
+over-weighted) — the conservative and liberal advocacy arms are each crossed with a **strength**
 factor (explicit vs. base), so strength is randomized *within* each participant,
 topic by topic:
 
@@ -65,8 +65,8 @@ There are exactly **two** things to set for a deployment:
   the ideology scores and pinned to OpenRouter slugs. **Re-verify the slugs** against
   the live catalog before launch.
 - **`CELL_WEIGHTS`** / **`CELLS`** — the six per-topic cells and their allocation
-  ratios (default equal sixths: cons·explicit, cons·base, lib·explicit, lib·base,
-  neutral, control).
+  ratios. Base advocacy is over-weighted: `cons·base` and `lib·base` = 1/4 each;
+  `cons·explicit`, `lib·explicit`, `neutral`, `control` = 1/8 each (sum 1).
 - **System prompts** — `NEUTRAL_PROMPTS` and `POLE_POSITIONS` in `survey.py`.
 - Consent / instrument questions / debrief text in `llmSurvey.html`.
 

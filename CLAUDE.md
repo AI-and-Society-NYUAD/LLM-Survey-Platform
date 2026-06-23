@@ -3,7 +3,7 @@
 Project state for a new session. **Active branch: `persuasion-v2-protocol`** (not merged to main; no PR). The code on that branch is the source of truth. (Sensitive deployment details — server IP/SSH, keys — are in the assistant's local project memory, not committed here.)
 
 ## What this is
-A survey measuring whether short LLM conversations shift US participants' political attitudes. Adapts the original platform (arXiv 2505.04171) to the "ideologically selected models" protocol. Fully within-subjects: each participant does all 4 topics (Gun control, Immigration, Police, Taxes); each topic is independently assigned one of SIX server-side-balanced cells (equal 1/6) = {conservative, liberal} × {explicit, base} advocacy + neutral + control. So BOTH direction AND strength (explicit/base) are randomized per-topic within each participant (strength was between-subjects in the pilots; now within). Strength changes only the system prompt, never the model.
+A survey measuring whether short LLM conversations shift US participants' political attitudes. Adapts the original platform (arXiv 2505.04171) to the "ideologically selected models" protocol. Fully within-subjects: each participant does all 4 topics (Gun control, Immigration, Police, Taxes); each topic is independently assigned one of SIX server-side-balanced cells = {conservative, liberal} × {explicit, base} advocacy + neutral + control, with BASE advocacy over-weighted (cons_base/lib_base = 1/4 each; cons_explicit/lib_explicit/neutral/control = 1/8 each). So BOTH direction AND strength (explicit/base) are randomized per-topic within each participant (strength was between-subjects in the pilots; now within). Strength changes only the system prompt, never the model.
 
 ## Files
 - `survey.py` — Flask backend (all logic), run directly as `gunicorn survey:app` (ONE service; no entry points, no `SURVEY_PROMPT_MODE`). Reads `config.json`. Endpoints: `/assign` (single-blind balanced assignment), `/chat`, `/start`, `/end`, `/stance` (post only), `/checks` (per-topic §7.6), `/survey` (instrument), `/complete`.
@@ -14,7 +14,7 @@ A survey measuring whether short LLM conversations shift US participants' politi
 - (`survey_explicit.py` / `survey_base.py` were removed when strength became within-subject.)
 
 ## Strength = explicit | base (per-topic, within-subject)
-Each topic's assignment entry carries a `strength` (`explicit`/`base` for advocacy cells; `None` for neutral/control). `CELLS` maps the 6 cells → (condition, strength); `CELL_WEIGHTS` = equal 1/6; balancing is over the 6 cells per topic. `build_system_prompt(topic, lean, strength)` and the `/chat` advocacy injection key off the per-topic `strength` (no global mode):
+Each topic's assignment entry carries a `strength` (`explicit`/`base` for advocacy cells; `None` for neutral/control). `CELLS` maps the 6 cells → (condition, strength); `CELL_WEIGHTS` over-weights base (cons_base/lib_base = 1/4 each; explicit/neutral/control cells = 1/8 each); balancing is over the 6 cells per topic. `build_system_prompt(topic, lean, strength)` and the `/chat` advocacy injection key off the per-topic `strength` (no global mode):
 - **explicit** advocacy: a GENTLE partisan prompt (lean + "argue gently, don't pressure"); the specific item is injected and the model is told its own view + to answer directly.
 - **base** advocacy: only "discuss naturally, stay on topic" (no steering — natural behavior).
 - **neutral**: balanced Appendix-A "present both sides" (mode-invariant). **control**: no chat.

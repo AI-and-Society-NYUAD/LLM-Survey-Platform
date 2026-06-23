@@ -69,10 +69,8 @@ RESULTS_DIR = "results"
 ASSIGN_FILE = os.path.join(RESULTS_DIR, "_assignments.json")
 ASSIGN_LOCK = os.path.join(RESULTS_DIR, "_assignments.lock")
 
-# Six balanced per-topic cells, equal weight (~1/6 each): the old conservative-1/3
-# and liberal-1/3 each split 50/50 into explicit/base, plus neutral-1/6 and
-# control-1/6. Each cell maps to a (direction condition, strength) pair; strength is
-# None where it does not apply (neutral is mode-invariant; control has no chat).
+# Six per-topic cells. Each maps to a (direction condition, strength) pair; strength
+# is None where it does not apply (neutral is mode-invariant; control has no chat).
 CELLS = {
     "cons_explicit": ("conservative", "explicit"),
     "cons_base":     ("conservative", "base"),
@@ -81,7 +79,19 @@ CELLS = {
     "neutral":       ("neutral",      None),
     "control":       ("control",      None),
 }
-CELL_WEIGHTS = {cell: 1 / 6 for cell in CELLS}
+# Allocation weights (sum to 1). BASE advocacy is over-weighted (it is the featured,
+# hardest-to-detect hypothesis); explicit advocacy, neutral, and control share the
+# rest equally. Base cells get 2x the others: cons_base/lib_base = 1/4 each;
+# cons_explicit/lib_explicit/neutral/control = 1/8 each. The weighted least-filled
+# balancer (_pick_cell) keeps each topic's counts proportional to these.
+CELL_WEIGHTS = {
+    "cons_base":     1 / 4,
+    "lib_base":      1 / 4,
+    "cons_explicit": 1 / 8,
+    "lib_explicit":  1 / 8,
+    "neutral":       1 / 8,
+    "control":       1 / 8,
+}
 
 # ---------------------------------------------------------------------------
 # Topics and stance items (protocol §5.3)
