@@ -453,13 +453,11 @@
 	// ---------------------------------------------------------------
 	// Config + participant id
 	// ---------------------------------------------------------------
-	// Two study versions run as separate backends on separate ports:
-	//   explicit (partisan prompts) -> :5000,  base (natural behavior) -> :5001.
-	// The version is chosen by the ?mode= URL param so ONE frontend serves both
-	// studies; the Prolific link for the base study just adds &mode=base.
-	const MODE_PORTS = { explicit: 5000, base: 5001 };
-	const STUDY_MODE = (new URLSearchParams(location.search).get('mode') || 'explicit').toLowerCase();
-	const API_PORT = MODE_PORTS[STUDY_MODE] || MODE_PORTS.explicit;
+	// Single backend (one Flask/gunicorn process) serves the whole study. Strength
+	// (explicit vs base) is now randomized per-topic inside the backend, so there is
+	// no ?mode= URL param and no per-version port — every participant uses one URL.
+	// When the API moves behind the 443 reverse proxy, set API_PORT = null (same origin).
+	const API_PORT = 5000;
 	const API_BASE = location.protocol + '//' + location.hostname + (API_PORT ? ':' + API_PORT : '');
 	// The completion code is delivered by the backend at /complete (only after the
 	// participant finishes), so it never lives in a publicly readable file.

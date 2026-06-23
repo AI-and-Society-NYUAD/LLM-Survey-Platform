@@ -1,3 +1,5 @@
 __pycache__/
 *.pyc
 results_*/
+results/
+deploy_commands.txt

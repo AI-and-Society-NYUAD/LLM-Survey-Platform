@@ -3,18 +3,25 @@
 A between-conditions survey platform for measuring how short LLM conversations
 shift participants' political attitudes. Each participant goes through four
 topics (Gun control, Immigration, Police, Taxes). Each topic is independently
-assigned one of four conditions by a server-side balanced randomizer:
+assigned one of **six balanced cells** by a server-side randomizer — the
+conservative and liberal advocacy arms are each crossed with a **strength**
+factor (explicit vs. base), so strength is randomized *within* each participant,
+topic by topic:
 
-| Condition | Treatment |
-|-----------|-----------|
-| Conservative | An ideologically-selected model + a conservative system prompt for that topic |
-| Liberal | An ideologically-selected model + a liberal system prompt for that topic |
-| Neutral | Claude Sonnet + a balanced/non-partisan system prompt (protocol Appendix A) |
+| Cell | Treatment |
+|------|-----------|
+| Conservative · explicit | Ideologically-selected model, conservative prompt that argues the pole |
+| Conservative · base | Same model, but only told to stay on topic (natural behavior) |
+| Liberal · explicit | Ideologically-selected model, liberal prompt that argues the pole |
+| Liberal · base | Same model, but only told to stay on topic (natural behavior) |
+| Neutral | Claude Sonnet + a balanced/non-partisan prompt (Appendix A); strength does not apply |
 | Control | No LLM; participant answers the stance items directly |
 
-For chat conditions a participant gives a **pre**-stance, has a timed
-conversation (min turns enforced), gives a **post**-stance, then answers
-per-conversation manipulation checks. Control topics collect a single stance.
+Strength only changes the *system prompt*, never the model: an advocacy cell's
+model is chosen by topic + pole alone. For chat cells a participant gives a
+**pre**-stance, has a timed conversation (3-minute timer; no message minimum),
+gives a **post**-stance, then answers per-conversation manipulation checks.
+Control topics collect a single stance.
 
 This repository has two components:
 
@@ -57,31 +64,31 @@ There are exactly **two** things to set for a deployment:
 - **`MODELS`** in `survey.py` — the per-topic, per-pole model roster, selected from
   the ideology scores and pinned to OpenRouter slugs. **Re-verify the slugs** against
   the live catalog before launch.
-- **`CONDITION_WEIGHTS`** — arm allocation ratios (default 1/3 · 1/3 · 1/6 · 1/6).
+- **`CELL_WEIGHTS`** / **`CELLS`** — the six per-topic cells and their allocation
+  ratios (default equal sixths: cons·explicit, cons·base, lib·explicit, lib·base,
+  neutral, control).
 - **System prompts** — `NEUTRAL_PROMPTS` and `POLE_POSITIONS` in `survey.py`.
 - Consent / instrument questions / debrief text in `llmSurvey.html`.
 
 ---
 
-## Two versions: explicit vs. base
+## Strength (explicit vs. base) is a within-subject factor
 
-The platform ships two prompt variants that share all code (`survey.py` is the
-core; the entry points just set the mode and write to separate results dirs):
+Earlier versions ran two separate backends (explicit on :5000, base on :5001) and
+fixed the prompt style per participant. Strength is now randomized **per topic
+inside a single backend**, so one participant sees a mix of explicit and base
+conversations across their four topics. There is no `SURVEY_PROMPT_MODE`, no
+`?mode=` URL param, and a single results dir.
 
-| Entry point | Conservative/liberal arms | Neutral arm | Data dir |
-|-------------|---------------------------|-------------|----------|
-| `survey_explicit:app` | explicitly prompted to argue the pole | balanced (Appendix A) | `results_explicit/` |
-| `survey_base:app` | only told to stay on topic (natural behavior) | balanced (Appendix A) | `results_base/` |
+- **explicit** advocacy cells get a gentle partisan prompt that argues the pole.
+- **base** advocacy cells are only told to stay on topic (natural behavior).
+- **neutral** is mode-invariant (balanced Appendix-A prompt); **control** has no chat.
 
-Both use the identical model roster and arm assignment; only the conservative/
-liberal system prompt differs. Run each as its own service (different port), e.g.:
+Run the one service (THREADED workers — a slow `/chat` must not starve `/assign`):
 ```bash
-gunicorn -w 4 --timeout 120 --certfile=... --keyfile=... -b 0.0.0.0:5000 survey_explicit:app
-gunicorn -w 4 --timeout 120 --certfile=... --keyfile=... -b 0.0.0.0:5001 survey_base:app
+gunicorn --worker-class gthread -w 4 --threads 16 --timeout 120 \
+  --certfile=... --keyfile=... -b 0.0.0.0:5000 survey:app
 ```
-(`SURVEY_PROMPT_MODE=explicit|base` is set by the entry points; `survey:app`
-directly defaults to explicit. `--timeout 120` keeps workers from being killed
-during slow model responses.)
 
 ## Backend: `survey.py`
 
@@ -125,12 +132,12 @@ Ensure your DNS A record points `mydomain.com` to your server's IP.
 
 ## Frontend: `llmSurvey.html`
 
-Host on any static web server (Apache, Nginx, ...), with `config.json` in the same
-directory. `API_BASE` and the completion code come from `config.json` at load time.
-Two behavior toggles remain near the top of the `<script>` block:
+Host on any static web server (Apache, Nginx, ...). The frontend needs **no**
+config file: it derives `API_BASE` from its own page URL (see `API_PORT` near the
+top of the `<script>` block) and gets the completion code from `/complete`. One
+behavior toggle lives near the top of the `<script>` block:
 
-- **`CHAT_SECONDS`** — conversation length (default 300 = 5 min).
-- **`MIN_TURNS`** — minimum participant messages before "Continue" unlocks (default 4).
+- **`CHAT_SECONDS`** — conversation length (default 180 = 3 min; the only gate to continue).
 
 ---
 

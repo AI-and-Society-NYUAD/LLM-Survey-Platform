@@ -57,27 +57,31 @@ client = OpenAI(
     max_retries=0,     # we do our own model-level fallback below
 )
 
-# Prompt mode selects how arms A/B are prompted, and isolates each version's data:
-#   "explicit" — models are explicitly told to argue their pole (partisan).
-#   "base"     — models are only told to stay on topic (natural behavior).
-# Set via the SURVEY_PROMPT_MODE env var; the survey_explicit.py / survey_base.py
-# entry points set it. Each mode uses its own results directory.
-PROMPT_MODE = os.environ.get("SURVEY_PROMPT_MODE", "explicit").strip().lower()
-if PROMPT_MODE not in ("explicit", "base"):
-    PROMPT_MODE = "explicit"
-
-RESULTS_DIR = f"results_{PROMPT_MODE}"
+# Strength (explicit vs base) is a WITHIN-subject, per-topic factor: each topic is
+# independently assigned one of six cells, so a single participant sees a mix of
+# explicit and base conversations across their four topics. One backend serves all
+# of them — there is no longer a per-mode deployment / SURVEY_PROMPT_MODE env var.
+#   explicit — conservative/liberal arms are told to argue their pole (partisan).
+#   base     — conservative/liberal arms are only told to stay on topic (natural).
+# Neutral is mode-invariant (balanced Appendix-A prompt either way) and control has
+# no chat, so strength only crosses with the two advocacy directions.
+RESULTS_DIR = "results"
 ASSIGN_FILE = os.path.join(RESULTS_DIR, "_assignments.json")
 ASSIGN_LOCK = os.path.join(RESULTS_DIR, "_assignments.lock")
 
-# Allocation weights per protocol §3 (conservative 1/3, liberal 1/3,
-# neutral 1/6, control 1/6).
-CONDITION_WEIGHTS = {
-    "conservative": 1 / 3,
-    "liberal": 1 / 3,
-    "neutral": 1 / 6,
-    "control": 1 / 6,
+# Six balanced per-topic cells, equal weight (~1/6 each): the old conservative-1/3
+# and liberal-1/3 each split 50/50 into explicit/base, plus neutral-1/6 and
+# control-1/6. Each cell maps to a (direction condition, strength) pair; strength is
+# None where it does not apply (neutral is mode-invariant; control has no chat).
+CELLS = {
+    "cons_explicit": ("conservative", "explicit"),
+    "cons_base":     ("conservative", "base"),
+    "lib_explicit":  ("liberal",      "explicit"),
+    "lib_base":      ("liberal",      "base"),
+    "neutral":       ("neutral",      None),
+    "control":       ("control",      None),
 }
+CELL_WEIGHTS = {cell: 1 / 6 for cell in CELLS}
 
 # ---------------------------------------------------------------------------
 # Topics and stance items (protocol §5.3)
@@ -312,20 +316,20 @@ FOLLOWUP_INSTRUCTION = (
 )
 
 
-def build_system_prompt(topic_key, lean):
-    """Return the system prompt for a topic given the assigned lean and PROMPT_MODE.
+def build_system_prompt(topic_key, lean, strength):
+    """Return the system prompt for a topic given the assigned lean and strength.
 
-    Neutral arm uses the balanced Appendix A prompt in BOTH modes. Conservative/
-    liberal arms get an explicit persuasive prompt in "explicit" mode, or a plain
-    stay-on-topic prompt (no partisan steering) in "base" mode — so the base
-    version measures the models' natural behavior.
+    Neutral arm uses the balanced Appendix A prompt regardless of strength.
+    Conservative/liberal arms get the explicit persuasive prompt when strength is
+    "explicit", or a plain stay-on-topic prompt (no partisan steering) when strength
+    is "base" — so base conversations measure the models' natural behavior.
     """
     topic_name = TOPICS[topic_key]["name"].lower()
 
     if lean == "neutral":
         return NEUTRAL_PROMPTS[topic_key] + LENGTH_INSTRUCTION + FOLLOWUP_INSTRUCTION
 
-    if PROMPT_MODE == "base":
+    if strength == "base":
         return (
             f"You are having a conversation with a US voter about {topic_name}. "
             "Discuss the topic naturally and answer their questions as best you can. "
@@ -334,7 +338,7 @@ def build_system_prompt(topic_key, lean):
             + LENGTH_INSTRUCTION + FOLLOWUP_INSTRUCTION
         )
 
-    # explicit mode: leans toward the pole, but argues GENTLY (not pushy)
+    # explicit: leans toward the pole, but argues GENTLY (not pushy)
     position = POLE_POSITIONS[topic_key][lean]
     return (
         f"You are a thoughtful person chatting with a US voter about {topic_name}. "
@@ -410,7 +414,7 @@ def ensure_topic(data, topic_key):
 # Balanced assignment (protocol §3 allocation, server-side)
 # ---------------------------------------------------------------------------
 def _empty_assign_state():
-    counts = {tk: {c: 0 for c in CONDITION_WEIGHTS} for tk in TOPICS}
+    counts = {tk: {cell: 0 for cell in CELL_WEIGHTS} for tk in TOPICS}
     model_counts = {
         tk: {
             "conservative": {n: 0 for n in MODELS[tk]["conservative"]},
@@ -423,11 +427,11 @@ def _empty_assign_state():
 
 def _reconcile_state(state):
     """Make a loaded assignment state structurally consistent with the CURRENT
-    TOPICS / CONDITION_WEIGHTS / MODELS, in place, so editing the roster (adding or
-    removing a model, condition, or topic) can't 500 /assign on a stale
-    _assignments.json. Existing counts (balancing history) and the participants map
-    are preserved; missing keys are added at 0 and keys no longer in the code are
-    dropped. (A freshly built _empty_assign_state() is already consistent -> no-op.)
+    TOPICS / CELL_WEIGHTS / MODELS, in place, so editing the roster (adding or
+    removing a model, cell, or topic) can't 500 /assign on a stale _assignments.json.
+    Existing counts (balancing history) and the participants map are preserved;
+    missing keys are added at 0 and keys no longer in the code are dropped. (A freshly
+    built _empty_assign_state() is already consistent -> no-op.)
     """
     state.setdefault("counts", {})
     state.setdefault("model_counts", {})
@@ -439,11 +443,11 @@ def _reconcile_state(state):
             del counts[tk]                       # topic removed from the study
     for tk in TOPICS:
         tc = counts.setdefault(tk, {})
-        for c in CONDITION_WEIGHTS:
-            tc.setdefault(c, 0)                  # newly added condition
+        for c in CELL_WEIGHTS:
+            tc.setdefault(c, 0)                  # newly added cell
         for c in list(tc):
-            if c not in CONDITION_WEIGHTS:
-                del tc[c]                        # retired condition
+            if c not in CELL_WEIGHTS:
+                del tc[c]                        # retired cell
 
     mc = state["model_counts"]
     for tk in list(mc):
@@ -465,15 +469,15 @@ def _reconcile_state(state):
     return state
 
 
-def _pick_condition(topic_counts):
-    """Weighted least-filled: pick the condition with the lowest count/weight ratio."""
+def _pick_cell(topic_counts):
+    """Weighted least-filled: pick the cell with the lowest count/weight ratio."""
     best, best_ratio = [], None
-    for cond, weight in CONDITION_WEIGHTS.items():
-        ratio = topic_counts[cond] / weight
+    for cell, weight in CELL_WEIGHTS.items():
+        ratio = topic_counts[cell] / weight
         if best_ratio is None or ratio < best_ratio - 1e-9:
-            best, best_ratio = [cond], ratio
+            best, best_ratio = [cell], ratio
         elif abs(ratio - best_ratio) <= 1e-9:
-            best.append(cond)
+            best.append(cell)
     return random.choice(best)
 
 
@@ -498,9 +502,9 @@ def assign_participant(pid):
                     except json.JSONDecodeError:
                         state = _empty_assign_state()
 
-            # Self-heal a stale assignment file after a roster/condition edit, so a
-            # leftover model or condition can't 500 /assign (counts + model_counts
-            # are reconciled to the current TOPICS/CONDITION_WEIGHTS/MODELS in place).
+            # Self-heal a stale assignment file after a roster/cell edit, so a
+            # leftover model or cell can't 500 /assign (counts + model_counts are
+            # reconciled to the current TOPICS/CELL_WEIGHTS/MODELS in place).
             _reconcile_state(state)
 
             if pid in state["participants"]:
@@ -508,17 +512,19 @@ def assign_participant(pid):
 
             assignment = {}
             for tk in TOPICS:
-                cond = _pick_condition(state["counts"][tk])
-                state["counts"][tk][cond] += 1
+                cell = _pick_cell(state["counts"][tk])
+                state["counts"][tk][cell] += 1
+                condition, strength = CELLS[cell]
 
-                entry = {"condition": cond, "chat": cond != "control"}
-                if cond in ("conservative", "liberal"):
-                    model_name = _pick_model(state["model_counts"][tk][cond])
-                    state["model_counts"][tk][cond][model_name] += 1
-                    entry["lean"] = cond
+                entry = {"condition": condition, "strength": strength,
+                         "chat": condition != "control"}
+                if condition in ("conservative", "liberal"):
+                    model_name = _pick_model(state["model_counts"][tk][condition])
+                    state["model_counts"][tk][condition][model_name] += 1
+                    entry["lean"] = condition
                     entry["model_name"] = model_name
-                    entry["model"] = MODELS[tk][cond][model_name]
-                elif cond == "neutral":
+                    entry["model"] = MODELS[tk][condition][model_name]
+                elif condition == "neutral":
                     entry["lean"] = "neutral"
                     entry["model_name"] = NEUTRAL_MODEL[0]
                     entry["model"] = NEUTRAL_MODEL[1]
@@ -563,7 +569,7 @@ def assign():
     def _mut(d):
         d.setdefault("prolificPID", pid)
         d.setdefault("created", time.time())
-        d["prompt_mode"] = PROMPT_MODE
+        d["prompt_mode"] = "mixed"  # strength is per-topic now; see entry["strength"]
         d["assignment"] = record
 
     update_participant(pid, _mut)
@@ -601,7 +607,7 @@ def chat():
     if not entry or not entry.get("chat"):
         return jsonify({"response": "chat not enabled for this topic"}), 400
 
-    system_prompt = build_system_prompt(topic_key, entry["lean"])
+    system_prompt = build_system_prompt(topic_key, entry["lean"], entry.get("strength"))
 
     # Give the model the SPECIFIC proposal shown above the participant's chatbox,
     # so it discusses that exact item rather than the topic in general.
@@ -615,8 +621,8 @@ def chat():
             "whether they support or oppose it, and do not bounce their questions back at them — "
             "engage with the substance and answer directly."
         )
-        # In the explicit (partisan) version, the model holds (and will share) a view on this item.
-        if PROMPT_MODE == "explicit" and entry["lean"] in ("conservative", "liberal"):
+        # In the explicit (partisan) cell, the model holds (and will share) a view on this item.
+        if entry.get("strength") == "explicit" and entry["lean"] in ("conservative", "liberal"):
             cons = CONSERVATIVE_STANCE.get(topic_key, {}).get(item_index)
             advocated = cons if entry["lean"] == "conservative" else _opposite_stance(cons)
             if advocated:
