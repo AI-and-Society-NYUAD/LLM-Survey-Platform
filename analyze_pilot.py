@@ -27,6 +27,7 @@ CONSERVATIVE_STANCE = {
     "taxes":       {0: "Oppose",  1: "Oppose"},   # wealth tax / inheritance tax
 }
 TOPICS = list(CONSERVATIVE_STANCE)
+EXCLUDE_SILENT = False  # set by --exclude-silent: drop chat-arm topic-slots with 0 participant messages (no treatment delivered)
 
 def num(x):
     try: return float(x)
@@ -83,10 +84,20 @@ def analyze(version, rows):
 
     # topic-slots
     S = []
+    chat_slots = silent_slots = fully_silent = 0
     for pid, d in completed:
         ins = d['instrument']
+        p_chat = p_silent = 0
         for tk, a in d['assignment']['topics'].items():
             t = d['topics'].get(tk, {}); ch = t.get('checks', {})
+            is_chat = bool(a.get('chat'))
+            nuser = sum(1 for m in t.get('transcript', []) if m.get('role') == 'user')
+            if is_chat:
+                chat_slots += 1; p_chat += 1
+                if nuser == 0:
+                    silent_slots += 1; p_silent += 1
+                    if EXCLUDE_SILENT:
+                        continue  # no treatment delivered -> drop this chat slot (per-protocol)
             S.append(dict(party=party3(ins.get('party_id')), ideo=ideo3(ins.get('ideology')),
                           arm=a['condition'], lean=a.get('lean'), topic=tk, model=a.get('model_name'),
                           cc=cc(d, tk), agree=t.get('agrees_with_llm'),
@@ -94,6 +105,9 @@ def analyze(version, rows):
                           trust=num(ch.get('post_trust')), use=ins.get('llm_use_legacy'),
                           tpre=num(ins.get('trust_pre')), npre=num(ins.get('perceived_neutrality_pre')),
                           pint=num(ins.get('political_interest'))))
+        if p_chat and p_silent == p_chat: fully_silent += 1
+    _mode = "EXCLUDED from outcomes (PER-PROTOCOL)" if EXCLUDE_SILENT else "INCLUDED (intent-to-treat)"
+    print(f"  SILENT chat-slots (0 participant msgs): {silent_slots}/{chat_slots}  |  fully-silent participants: {fully_silent}  ->  {_mode}")
 
     print("\n[PRIMARY] conservative-coded stance by arm (1=chose conservative side):")
     for arm in ('conservative', 'control', 'neutral', 'liberal'):
@@ -144,7 +158,10 @@ def analyze(version, rows):
                                           for m in d['topics'][tk].get('transcript', []) if m.get('model')))
 
 def main():
-    dirs = sys.argv[1:] or ['results_explicit', 'results_base']
+    global EXCLUDE_SILENT
+    args = sys.argv[1:]
+    EXCLUDE_SILENT = '--exclude-silent' in args
+    dirs = [a for a in args if not a.startswith('--')] or ['results_explicit', 'results_base']
     data = load(dirs)
     print("Loaded dirs:", dirs)
     print("De-duplicated records:", {v: len(r) for v, r in data.items()})

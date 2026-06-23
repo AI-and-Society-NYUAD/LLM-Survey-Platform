@@ -45,7 +45,7 @@ Read-only over SSH: `ssh root@<server> 'cd /root/LLM-Survey-Platform && tar czf 
 The auto-mode classifier BLOCKS: editing the shared Apache config, systemd, killing/creating processes on the prod server, creating live assignments. The USER runs all server write/restart/kill commands (provide exact commands). Read-only SSH and external curl to public endpoints are allowed.
 
 ## Deployment (high level; specifics in private memory)
-Apache serves the frontend on 443. Two gunicorn services run the API on ports 5000 (explicit) and 5001 (base) with `-w 10 --timeout 120` and the Let's Encrypt certs, kept alive in a `tmux` session. Frontend served from a `/persuasion/` path. Prolific URLs differ only by `&mode=base`; placeholder must be exactly `{{%PROLIFIC_PID%}}`. NOTE: serving the API on non-standard ports 5000/5001 risks some participants' networks blocking it — a 443 reverse-proxy is the robust pre-launch fix.
+Apache serves the frontend on 443. Two gunicorn services run the API on ports 5000 (explicit) and 5001 (base) with `--worker-class gthread -w 4 --threads 16 --timeout 120` (THREADED — sync workers ignore `--threads` and a slow /chat starves /assign) and the Let's Encrypt certs, kept alive in a `tmux` session. Frontend served from a `/persuasion/` path. Prolific URLs differ only by `&mode=base`; placeholder must be exactly `{{%PROLIFIC_PID%}}`. NOTE: serving the API on non-standard ports 5000/5001 risks some participants' networks blocking it — a 443 reverse-proxy is the robust pre-launch fix.
 
 ## Open items
 - Pre-launch: re-verify model slugs; move API behind 443 (reverse proxy) to avoid port-blocks; reset `_assignments.json` + clear test result files; open a PR.
