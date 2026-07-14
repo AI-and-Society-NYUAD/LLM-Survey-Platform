@@ -35,7 +35,7 @@ def main():
 
     slugs = collect_slugs()
     # Mirror the app: same max_tokens as /chat, and a prompt that needs a real answer.
-    max_tokens = 1024
+    max_tokens = 4096
     prompt = "In one short sentence, give an argument about a US public-policy issue."
     print(f"Testing {len(slugs)} unique model endpoints (max_tokens={max_tokens})...\n")
 

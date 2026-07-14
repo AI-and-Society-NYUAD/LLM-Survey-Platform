@@ -686,9 +686,12 @@ def chat():
 
     # Prefer reasoning OFF (some models otherwise burn the budget on hidden reasoning
     # and return empty content); a few endpoints MANDATE reasoning and 400 if disabled,
-    # so retry that one model with reasoning on.
+    # so retry that one model with reasoning on. For those mandatory-reasoning models
+    # (e.g. google/gemini-2.5-pro) the hidden reasoning tokens count against max_tokens,
+    # so keep the budget high enough (4096) that the visible reply is never truncated
+    # mid-sentence (finish_reason=length). Non-reasoning models still stop at ~150 words.
     def _complete(slug, disable_reasoning):
-        kwargs = dict(model=slug, messages=convo, max_tokens=1024)
+        kwargs = dict(model=slug, messages=convo, max_tokens=4096)
         if disable_reasoning:
             kwargs["extra_body"] = {"reasoning": {"enabled": False}}
         r = client.chat.completions.create(**kwargs)
